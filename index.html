@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Micro Accounting Dashboard</title>
     
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
@@ -301,6 +301,7 @@
 </div>
 
 <script>
+    // Налаштування твоїх Google ключів
     const SPREADSHEET_ID = '1aIEYM9GitfHJ9Eikw9sBTBarSw97ojSYutqqEznRbIc';
     const CLIENT_ID = '630137342173-710gjc52mpk3khcdosbkvmgla7h8sppi.apps.googleusercontent.com';
 
@@ -321,7 +322,15 @@
     function showToast(text) { const toast = document.getElementById('appToast'); toast.innerText = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2000); }
 
     let tokenClient;
-    window.addEventListener('DOMContentLoaded', () => {
+    
+    // Безпечна ініціалізація клієнта
+    function initGoogleClient() {
+        if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            console.log("Очікування завантаження Google SDK...");
+            setTimeout(initGoogleClient, 200);
+            return;
+        }
+        
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/spreadsheets',
@@ -333,9 +342,18 @@
                 }
             },
         });
-    });
+    }
 
-    function loginWithGoogle() { tokenClient.requestAccessToken({ prompt: 'consent' }); }
+    window.addEventListener('DOMContentLoaded', initGoogleClient);
+
+    // Функція входу із захистом від асинхронного "undefined" стану
+    function loginWithGoogle() { 
+        if (typeof tokenClient === 'undefined' || !tokenClient) {
+            alert("Сервіси авторизації Google ще завантажуються або заблоковані розширенням (AdBlock/Brave Shield). Спробуй вимкнути захист або оновити сторінку.");
+            return;
+        }
+        tokenClient.requestAccessToken({ prompt: 'consent' }); 
+    }
 
     function initAppAfterLogin() {
         document.getElementById('auth-screen-box').style.display = 'none';

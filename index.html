@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Porsche Orange Micro Accounting</title>
+    <title>Micro Accounting Dashboard</title>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
-            --porsche-orange: #FF5A36; /* Сміливий мандариново-помаранчевий з твого референсу */
-            --dark-graphite: #0B0B0C;  /* Глибокий темний */
-            --bg-light: #F9F9FB;       
+            --bahama-yellow: #E19E11; /* Твій улюблений Porsche 911 Classic Yellow */
+            --dark-graphite: #1C1C1E;  /* Глибокий темний графіт */
+            --bg-light: #F4F4F6;       
             --card-bg: #FFFFFF;
-            --border: #EAEAEA;
-            --gray-text: #929298;
+            --border: #E5E5EA;
+            --gray-text: #8E8E93;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -42,38 +42,38 @@
             max-width: 440px;
             background-color: var(--card-bg);
             min-height: 100vh;
-            padding: 28px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
             position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.03);
         }
 
         @media (min-width: 800px) {
             body { padding: 40px 24px; }
             .app-container {
-                max-width: 1080px;
+                max-width: 1040px;
                 min-height: auto;
-                border-radius: 32px;
-                padding: 48px;
+                border-radius: 24px;
+                padding: 40px;
                 display: grid;
                 grid-template-columns: 380px 1fr;
-                gap: 64px;
-                box-shadow: 0 20px 50px rgba(0,0,0,0.04);
+                gap: 60px;
             }
             .sidebar-panel {
                 border-right: 1px solid var(--border);
-                padding-right: 48px;
+                padding-right: 40px;
                 display: flex;
                 flex-direction: column;
                 height: 100%;
             }
-            .content-panel { display: block; min-height: 550px; }
+            .content-panel { display: block; min-height: 500px; }
             .screen { display: none !important; }
             #screen-main { display: flex !important; }
             .content-panel .screen.active { display: flex !important; }
             .back-link { display: none !important; }
-            .action-grid { margin-top: 48px !important; }
-            #auth-screen-box { grid-column: span 2; display: flex; justify-content: center; align-items: center; }
+            .action-grid { margin-top: 40px !important; }
+            #auth-screen-box { grid-column: span 2; display: flex; justify-content: center; align-items: center; min-height: 400px; }
         }
 
         @media (max-width: 799px) {
@@ -82,7 +82,7 @@
             .content-panel { display: contents; }
         }
 
-        /* ЕКРАН АВТОРИЗАЦІЇ */
+        /* ЧИСТИЙ ЕКРАН ВХОДУ БЕЗ ТАБЛИЧОК */
         .auth-container {
             display: flex;
             flex-direction: column;
@@ -90,79 +90,80 @@
             justify-content: center;
             flex-grow: 1;
             text-align: center;
-            background: linear-gradient(135deg, var(--porsche-orange) 0%, #E03E1A 100%);
-            margin: -28px;
-            padding: 40px;
-            color: white;
-        }
-        @media (min-width: 800px) {
-            .auth-container { margin: 0; border-radius: 24px; width: 100%; max-width: 450px; padding: 60px 40px; }
+            padding: 20px;
+            background: transparent;
         }
 
-        /* СТИЛЬ ЖУРНАЛЬНИХ ВІДЖЕТІВ (З ТВОГО С КРІНШОТУ) */
-        .app-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+        .btn-google-login { 
+            background: var(--dark-graphite); 
+            color: white; 
+            border: none; 
+            padding: 18px 36px; 
+            font-size: 16px; 
+            font-weight: 700; 
+            border-radius: 16px; 
+            cursor: pointer; 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            transition: background 0.2s;
+        }
+        .btn-google-login:hover { background: #3a3a3c; }
+
+        /* ІНТЕРФЕЙС ДАШБОРДУ */
+        .app-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
         .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--gray-text); font-weight: 700; margin-bottom: 6px; }
-        .business-selector { font-size: 32px; font-weight: 800; letter-spacing: -1px; border: none; background: transparent; color: var(--dark-graphite); cursor: pointer; outline: none; }
+        .business-selector { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; border: none; background: transparent; color: var(--dark-graphite); cursor: pointer; outline: none; }
         
-        .btn-settings { background: var(--bg-light); border: none; width: 48px; height: 48px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-settings { background: var(--bg-light); border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        .balance-card {
-            background-color: var(--porsche-orange);
-            color: white;
-            padding: 32px;
-            border-radius: 28px;
-            margin: 20px 0;
-            box-shadow: 0 12px 30px rgba(255, 90, 54, 0.25);
-        }
-        .balance-card .balance-label { color: rgba(255,255,255,0.7); font-size: 12px; letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
-        .balance-card .balance-amount { font-size: 54px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
+        .balance-card { padding: 30px 0; }
+        .balance-card .balance-label { color: var(--gray-text); font-size: 13px; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+        .balance-card .balance-amount { font-size: 52px; font-weight: 900; letter-spacing: -2px; line-height: 1; }
 
-        .action-grid { display: flex; flex-direction: column; gap: 14px; margin-top: auto; }
+        .action-grid { display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
         
-        .btn-main { width: 100%; height: 64px; border-radius: 20px; font-size: 18px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s cubic-bezier(0.161, 0.881, 0.581, 0.971); }
-        .btn-main:active { transform: scale(0.97); }
-        .btn-orange { background-color: var(--porsche-orange); color: white; box-shadow: 0 8px 20px rgba(255,90,54,0.15); }
+        .btn-main { width: 100%; height: 60px; border-radius: 16px; font-size: 18px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s ease; }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-yellow { background-color: var(--bahama-yellow); color: white; }
         .btn-dark { background-color: var(--dark-graphite); color: white; }
         .btn-outline { background-color: transparent; border: 2px solid var(--dark-graphite); color: var(--dark-graphite); }
-        .btn-main.selected { background-color: var(--dark-graphite); color: white; border: none; }
+        .btn-main.selected { border: 3px solid var(--dark-graphite); box-shadow: 0 0 10px rgba(0,0,0,0.1); }
 
         /* ТИПОГРАФІКА ФОРМ */
-        .back-link { font-size: 16px; font-weight: 600; color: var(--dark-graphite); cursor: pointer; margin-bottom: 28px; display: inline-block; }
-        .screen-title { font-size: 36px; font-weight: 900; letter-spacing: -1.5px; margin-bottom: 32px; }
+        .back-link { font-size: 16px; font-weight: 600; color: var(--dark-graphite); cursor: pointer; margin-bottom: 24px; display: inline-block; }
+        .screen-title { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 30px; }
         
-        .huge-amount-container { margin-bottom: 32px; border-bottom: 3px solid var(--dark-graphite); padding-bottom: 6px; }
-        .huge-amount-input { width: 100%; border: none; font-size: 56px; font-weight: 900; outline: none; color: var(--dark-graphite); letter-spacing: -2px; }
+        .huge-amount-container { margin-bottom: 30px; border-bottom: 3px solid var(--dark-graphite); padding-bottom: 4px; }
+        .huge-amount-input { width: 100%; border: none; font-size: 48px; font-weight: 900; outline: none; color: var(--dark-graphite); }
 
-        .form-group { margin-bottom: 24px; }
-        .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--gray-text); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--gray-text); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .standard-input, .standard-select { width: 100%; height: 58px; border: 2px solid var(--border); border-radius: 18px; padding: 0 20px; font-size: 18px; color: var(--dark-graphite); outline: none; background-color: var(--bg-light); transition: border-color 0.2s; }
-        .standard-input:focus, .standard-select:focus { border-color: var(--dark-graphite); background-color: white; }
+        .standard-input, .standard-select { width: 100%; height: 54px; border: 2px solid var(--border); border-radius: 14px; padding: 0 16px; font-size: 18px; color: var(--dark-graphite); outline: none; background-color: var(--bg-light); }
+        .standard-input:focus, .standard-select:focus { border-color: var(--dark-graphite); }
 
-        .select-combo { display: flex; gap: 12px; }
-        .btn-plus-inline { width: 58px; height: 58px; border-radius: 18px; border: 2px solid var(--dark-graphite); background-color: transparent; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .select-combo { display: flex; gap: 10px; }
+        .btn-plus-inline { width: 54px; height: 54px; border-radius: 14px; border: 2px solid var(--dark-graphite); background-color: transparent; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         /* ЗВІТНІСТЬ */
-        .date-range-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
-        .report-summary { background-color: var(--bg-light); border-radius: 24px; padding: 24px; margin: 24px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .date-range-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .report-summary { background-color: var(--bg-light); border-radius: 16px; padding: 20px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .summary-block { display: flex; flex-direction: column; }
-        .summary-block.full-width { grid-column: span 2; border-top: 1px solid var(--border); padding-top: 16px; }
-        .summary-num { font-size: 24px; font-weight: 800; margin-top: 4px; letter-spacing: -0.5px; }
+        .summary-block.full-width { grid-column: span 2; border-top: 1px solid var(--border); padding-top: 12px; }
+        .summary-num { font-size: 22px; font-weight: 800; margin-top: 4px; }
         .text-income { color: #248A3D; }
-        .text-expense { color: var(--porsche-orange); }
-        .chart-container { position: relative; width: 100%; height: 280px; margin-top: 24px; }
+        .text-expense { color: #D9383A; }
+        .chart-container { position: relative; width: 100%; height: 280px; margin-top: 20px; }
 
         /* МОДАЛКА ТА ТОСТ */
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100; backdrop-filter: blur(4px); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
         .modal-overlay.active { display: flex; }
-        .modal-card { background: white; border-radius: 28px; padding: 32px; width: 100%; max-width: 380px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-        .modal-title { font-size: 22px; font-weight: 900; margin-bottom: 20px; letter-spacing: -0.5px; }
+        .modal-card { background: white; border-radius: 20px; padding: 24px; width: 100%; max-width: 360px; }
+        .modal-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
 
-        .toast { position: fixed; bottom: 40px; left: 50%; transform: translate(-50%, 120px); background-color: var(--dark-graphite); color: white; padding: 18px 36px; border-radius: 30px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200; box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 100px); background-color: var(--dark-graphite); color: white; padding: 16px 32px; border-radius: 30px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200; }
         .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
         .pc-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--gray-text); text-align: center; font-size: 16px; font-weight: 500; }
-        .btn-google-login { background: white; color: var(--dark-graphite); border: none; padding: 16px 32px; font-size: 16px; font-weight: 700; border-radius: 16px; cursor: pointer; margin-top: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
@@ -172,42 +173,40 @@
 
     <div id="auth-screen-box">
         <div id="screen-auth" class="auth-container" style="display: flex;">
-            <h1 style="font-size: 42px; font-weight: 900; letter-spacing: -2px; line-height: 1.1;">Porsche Orange Accounting</h1>
-            <p style="margin-top: 14px; opacity: 0.8; font-size: 15px; line-height: 1.4;">Хмарна фінансова система для твоїх брендів із прямим збереженням у твої Google Sheets.</p>
-            <button class="btn-google-login" onclick="loginWithGoogle()">Увійти через Google</button>
+            <button class="btn-google-login" onclick="loginWithGoogle()">Увійти через Google акаунт</button>
         </div>
     </div>
 
     <div id="screen-main" class="screen sidebar-panel">
         <div class="app-header">
             <div>
-                <div class="meta-label">АКТИВНИЙ БРЕНД</div>
+                <div class="meta-label">МІКРО БУХГАЛТЕРІЯ</div>
                 <select id="businessSelect" class="business-selector" onchange="changeBusiness()"></select>
             </div>
             <button class="btn-settings" onclick="goToScreen('screen-settings')">⚙️</button>
         </div>
 
         <div class="balance-card">
-            <div class="balance-label">Доступний Бюджет</div>
+            <div class="balance-label">Загальний Бюджет</div>
             <div class="balance-amount" id="mainBalance">0 ₴</div>
         </div>
 
         <div class="action-grid">
-            <button id="btn-nav-expense" class="btn-main btn-orange" onclick="goToScreen('screen-expense')">➕ Додати витрату</button>
+            <button id="btn-nav-expense" class="btn-main btn-yellow" onclick="goToScreen('screen-expense')">➕ Додати витрату</button>
             <button id="btn-nav-income" class="btn-main btn-outline" onclick="goToScreen('screen-income')">💵 Додати прибуток</button>
-            <button id="btn-nav-report" class="btn-main btn-dark" onclick="openReportScreen()">📊 Дивитись звітність</button>
+            <button id="btn-nav-report" class="btn-main btn-dark" onclick="openReportScreen()">📊 Звітність</button>
         </div>
     </div>
 
     <div class="content-panel" id="main-content-wrapper" style="display: none;">
         
         <div id="pc-blank" class="pc-placeholder">
-            <span>← Натисни кнопку дії зліва, щоб внести транзакцію</span>
+            <span>← Оберіть дію ліворуч, щоб почати роботу</span>
         </div>
 
         <div id="screen-expense" class="screen">
-            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
-            <h2 class="screen-title">Нова витрата</h2>
+            <span class="back-link" onclick="goToScreen('screen-main')">← Головна</span>
+            <h2 class="screen-title">Додати витрату</h2>
             <form id="expenseForm" onsubmit="handleSaveExpense(event)">
                 <div class="form-group">
                     <label>Сума витрати (₴)</label>
@@ -216,15 +215,15 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Найменування позиції</label>
-                    <input type="text" id="expName" class="standard-input" placeholder="Наприклад: Тканина Денім" required>
+                    <label>Найменування</label>
+                    <input type="text" id="expName" class="standard-input" placeholder="Наприклад: Фурнітура" required>
                 </div>
                 <div class="form-group">
                     <label>Кількість</label>
                     <input type="number" id="expQty" class="standard-input" value="1" inputmode="decimal" step="any" required>
                 </div>
                 <div class="form-group">
-                    <label>Категорія витрати</label>
+                    <label>Категорія</label>
                     <div class="select-combo">
                         <select id="expCategory" class="standard-select" required></select>
                         <button type="button" class="btn-plus-inline" onclick="openModal('category')">+</button>
@@ -235,21 +234,21 @@
         </div>
 
         <div id="screen-income" class="screen">
-            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
-            <h2 class="screen-title">Новий прибуток</h2>
+            <span class="back-link" onclick="goToScreen('screen-main')">← Головна</span>
+            <h2 class="screen-title">Додати прибуток</h2>
             <form id="incomeForm" onsubmit="handleSaveIncome(event)">
                 <div class="form-group">
-                    <label>Сума надходження (₴)</label>
+                    <label>Сума прибутку (₴)</label>
                     <div class="huge-amount-container">
                         <input type="number" id="incAmount" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>За що саме</label>
-                    <input type="text" id="incName" class="standard-input" placeholder="Наприклад: Продаж худі" required>
+                    <label>За що</label>
+                    <input type="text" id="incName" class="standard-input" placeholder="Наприклад: Продаж сумочки" required>
                 </div>
                 <div class="form-group">
-                    <label>Джерело / Клієнт</label>
+                    <label>Від кого</label>
                     <div class="select-combo">
                         <select id="incClient" class="standard-select" required></select>
                         <button type="button" class="btn-plus-inline" onclick="openModal('client')">+</button>
@@ -260,26 +259,26 @@
         </div>
 
         <div id="screen-report" class="screen">
-            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
-            <h2 class="screen-title">Аналітика</h2>
+            <span class="back-link" onclick="goToScreen('screen-main')">← Головна</span>
+            <h2 class="screen-title">Звітність</h2>
             <div class="date-range-row">
-                <div class="form-group"><label>З дати</label><input type="date" id="repFrom" class="standard-input"></div>
-                <div class="form-group"><label>По дату</label><input type="date" id="repTo" class="standard-input"></div>
+                <div class="form-group"><label>З</label><input type="date" id="repFrom" class="standard-input"></div>
+                <div class="form-group"><label>По</label><input type="date" id="repTo" class="standard-input"></div>
             </div>
-            <button class="btn-main btn-orange" onclick="generateReport()">Сформувати звіт за період</button>
+            <button class="btn-main btn-yellow" onclick="generateReport()">Сформувати</button>
             <div class="report-summary">
                 <div class="summary-block"><span class="meta-label">ДОХОДИ</span><span class="summary-num text-income" id="repTotalIncome">0 ₴</span></div>
                 <div class="summary-block"><span class="meta-label">ВИТРАТИ</span><span class="summary-num text-expense" id="repTotalExpense">0 ₴</span></div>
-                <div class="summary-block full-width"><span class="meta-label">ЧИСТИЙ ПРИБУТОК</span><span class="summary-num" id="repNetBalance">0 ₴</span></div>
+                <div class="summary-block full-width"><span class="meta-label">БАЛАНС</span><span class="summary-num" id="repNetBalance">0 ₴</span></div>
             </div>
             <div class="chart-container"><canvas id="expenseChart"></canvas></div>
         </div>
 
         <div id="screen-settings" class="screen">
-            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
-            <h2 class="screen-title">Налаштування</h2>
+            <span class="back-link" onclick="goToScreen('screen-main')">← Головна</span>
+            <h2 class="screen-title">Бренди</h2>
             <div class="form-group">
-                <label>Додати новий бренд / напрямок</label>
+                <label>Створити новий мікробізнес</label>
                 <div class="select-combo">
                     <input type="text" id="newBusinessName" class="standard-input" placeholder="Назва бренду">
                     <button class="btn-plus-inline" onclick="handleCreateBusiness()">+</button>
@@ -293,16 +292,15 @@
 <div id="directoryModal" class="modal-overlay">
     <div class="modal-card">
         <div class="modal-title" id="modalTitle">Додати</div>
-        <div class="form-group"><input type="text" id="modalInput" class="standard-input" placeholder="Назва..."></div>
-        <div style="display: flex; gap: 12px; margin-top: 10px;">
-            <button class="btn-main btn-outline" style="height: 48px; font-size: 15px;" onclick="closeModal()">Скасувати</button>
-            <button class="btn-main btn-dark" style="height: 48px; font-size: 15px;" onclick="saveModalItem()">Зберегти</button>
+        <div class="form-group"><input type="text" id="modalInput" class="standard-input" placeholder="Введіть назву..."></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="btn-main btn-outline" style="height: 46px; font-size: 15px;" onclick="closeModal()">Скасувати</button>
+            <button class="btn-main btn-dark" style="height: 46px; font-size: 15px;" onclick="saveModalItem()">Зберегти</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- ТВОЇ ОФІЦІЙНІ НАЛАШТУВАННЯ КОНФІГУРАЦІЇ ---
     const SPREADSHEET_ID = '1aIEYM9GitfHJ9Eikw9sBTBarSw97ojSYutqqEznRbIc';
     const CLIENT_ID = '630137342173-710gjc52mpk3khcdosbkvmgla7h8sppi.apps.googleusercontent.com';
 
@@ -310,31 +308,20 @@
     let currentChartInstance = null;
     let currentModalTarget = '';
 
-    // Локальні довідники для швидкої роботи інтерфейсу
-    let state = JSON.parse(localStorage.getItem('porsche_accounting_config')) || {
+    let state = JSON.parse(localStorage.getItem('micro_accounting_v3')) || {
         currentBusiness: "Якзаманеться",
         businesses: ["Якзаманеться"],
         categories: ["Матеріали", "Фурнітура", "Логістика", "Пакування"],
         clients: ["Роздріб", "Instagram", "Власний сайт"]
     };
 
-    // Глобальний масив транзакцій, викачаний із Google Таблиць
     let transactionsDatabase = [];
 
-    function saveConfig() {
-        localStorage.setItem('porsche_accounting_config', JSON.stringify(state));
-    }
+    function saveConfig() { localStorage.setItem('micro_accounting_v3', JSON.stringify(state)); }
+    function showToast(text) { const toast = document.getElementById('appToast'); toast.innerText = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2000); }
 
-    function showToast(text) {
-        const toast = document.getElementById('appToast');
-        toast.innerText = text; toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 2500);
-    }
-
-    // --- GOOGLE OAUTH АВТЕНТИФІКАЦІЯ ---
     let tokenClient;
     window.addEventListener('DOMContentLoaded', () => {
-        // Ініціалізуємо клієнта авторизації Google OAuth 2.0 Token Flow
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: 'https://www.googleapis.com/auth/spreadsheets',
@@ -348,12 +335,9 @@
         });
     });
 
-    function loginWithGoogle() {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
-    }
+    function loginWithGoogle() { tokenClient.requestAccessToken({ prompt: 'consent' }); }
 
     function initAppAfterLogin() {
-        // Перемикаємо видимість інтерфейсу з екрану логіну на основний дашборд
         document.getElementById('auth-screen-box').style.display = 'none';
         document.getElementById('main-content-wrapper').style.display = 'block';
         
@@ -371,41 +355,29 @@
         document.getElementById('repFrom').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
         document.getElementById('repTo').value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
-        // Завантажуємо актуальні дані з хмари
         syncWithGoogleSheets();
     }
 
-    // --- РОБОТА З API GOOGLE SPREADSHEETS ---
     async function syncWithGoogleSheets() {
         showToast("Синхронізація з Диском...");
         const currentYear = new Date().getFullYear().toString();
 
         try {
-            // Перевіряємо, чи є лист поточного року в таблиці
             let metadataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`, {
                 headers: { 'Authorization': `Bearer ${googleToken}` }
             });
             let metadata = await metadataResp.json();
-            
             let sheetExists = metadata.sheets.some(s => s.properties.title === currentYear);
 
             if (!sheetExists) {
-                // Якщо листа для поточного року немає, створюємо його автоматично з колонками
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        requests: [{
-                            addSheet: { properties: { title: currentYear } }
-                        }]
-                    })
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: currentYear } } }] })
                 });
-
-                // Додаємо заголовки стовпчиків
                 await appendRowToSheet(currentYear, ["ID", "Дата", "Бренд", "Тип", "Назва", "Ціна", "Кількість", "Разом", "Категорія/Клієнт"]);
             }
 
-            // Викачуємо всі транзакції з поточного року для підрахунку балансу
             let dataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${currentYear}!A2:I10000`, {
                 headers: { 'Authorization': `Bearer ${googleToken}` }
             });
@@ -415,23 +387,17 @@
             if (dataRows.values) {
                 dataRows.values.forEach(row => {
                     transactionsDatabase.push({
-                        date: row[1],
-                        business: row[2],
-                        type: row[3],
-                        name: row[4],
-                        price: parseFloat(row[5]) || 0,
-                        qty: parseFloat(row[6]) || 1,
-                        total: parseFloat(row[7]) || 0,
-                        categoryOrClient: row[8]
+                        date: row[1], business: row[2], type: row[3], name: row[4],
+                        price: parseFloat(row[5]) || 0, qty: parseFloat(row[6]) || 1,
+                        total: parseFloat(row[7]) || 0, categoryOrClient: row[8]
                     });
                 });
             }
-
             calculateMainBalance();
-            showToast("Дані оновлено з хмари!");
+            showToast("Дані оновлено!");
         } catch (err) {
             console.error(err);
-            showToast("Помилка синхронізації з Google.");
+            showToast("Помилка зв'язку з Google.");
         }
     }
 
@@ -443,7 +409,6 @@
         });
     }
 
-    // --- ЛОГІКА ДОДАТКА ---
     function goToScreen(screenId) {
         document.getElementById('btn-nav-expense').classList.remove('selected');
         document.getElementById('btn-nav-income').classList.remove('selected');
@@ -483,7 +448,7 @@
 
     async function handleSaveExpense(e) {
         e.preventDefault();
-        showToast("Запис у Таблицю...");
+        showToast("Запис...");
         const price = parseFloat(document.getElementById('expPrice').value);
         const qty = parseFloat(document.getElementById('expQty').value);
         const name = document.getElementById('expName').value.trim();
@@ -493,21 +458,18 @@
         const total = price * qty;
 
         const row = [Date.now().toString(), dateStr, state.currentBusiness, 'витрата', name, price, qty, total, cat];
-
         try {
             await appendRowToSheet(currentYear, row);
             document.getElementById('expenseForm').reset();
             document.getElementById('expQty').value = "1";
             await syncWithGoogleSheets();
             goToScreen('screen-main');
-        } catch(e) {
-            showToast("Не вдалося зберегти.");
-        }
+        } catch(e) { showToast("Помилка збереження."); }
     }
 
     async function handleSaveIncome(e) {
         e.preventDefault();
-        showToast("Запис у Таблицю...");
+        showToast("Запис...");
         const amount = parseFloat(document.getElementById('incAmount').value);
         const name = document.getElementById('incName').value.trim();
         const client = document.getElementById('incClient').value;
@@ -515,22 +477,15 @@
         const dateStr = new Date().toISOString().split('T')[0];
 
         const row = [Date.now().toString(), dateStr, state.currentBusiness, 'прибуток', name, amount, 1, amount, client];
-
         try {
             await appendRowToSheet(currentYear, row);
             document.getElementById('incomeForm').reset();
             await syncWithGoogleSheets();
             goToScreen('screen-main');
-        } catch(e) {
-            showToast("Не вдалося зберегти.");
-        }
+        } catch(e) { showToast("Помилка збереження."); }
     }
 
-    // --- ФОРМУВАННЯ АНАЛІТИКИ ТА ГРАФІКІВ ---
-    function openReportScreen() {
-        goToScreen('screen-report');
-        generateReport();
-    }
+    function openReportScreen() { goToScreen('screen-report'); generateReport(); }
 
     function generateReport() {
         const fromDate = document.getElementById('repFrom').value;
@@ -551,7 +506,7 @@
         document.getElementById('repTotalExpense').innerText = `${totalExpense.toLocaleString('uk-UA')} ₴`;
         const net = totalIncome - totalExpense;
         document.getElementById('repNetBalance').innerText = `${net.toLocaleString('uk-UA')} ₴`;
-        document.getElementById('repNetBalance').style.color = net >= 0 ? '#248A3D' : '#FF5A36';
+        document.getElementById('repNetBalance').style.color = net >= 0 ? '#248A3D' : '#D9383A';
 
         renderPieChart(categoryData);
     }
@@ -559,9 +514,7 @@
     function renderPieChart(dataObj) {
         const ctx = document.getElementById('expenseChart').getContext('2d');
         if(currentChartInstance) currentChartInstance.destroy();
-
-        const labels = Object.keys(dataObj);
-        const dataValues = Object.values(dataObj);
+        const labels = Object.keys(dataObj); const dataValues = Object.values(dataObj);
         if(labels.length === 0) return;
 
         currentChartInstance = new Chart(ctx, {
@@ -570,15 +523,14 @@
                 labels: labels,
                 datasets: [{
                     data: dataValues,
-                    backgroundColor: ['#FF5A36', '#0B0B0C', '#929298', '#248A3D', '#4478FF', '#FFB136'],
-                    borderWidth: 3, borderColor: '#ffffff'
+                    backgroundColor: ['#E19E11', '#1C1C1E', '#8E8E93', '#248A3D', '#4478FF', '#FF5252'],
+                    borderWidth: 2, borderColor: '#ffffff'
                 }]
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
         });
     }
 
-    // --- УПРАВЛІННЯ ДОВІДНИКАМИ (МОДАЛКИ) ---
     function renderBusinessSelector() {
         const select = document.getElementById('businessSelect'); select.innerHTML = '';
         state.businesses.forEach(b => {
@@ -591,15 +543,12 @@
     function populateDropdowns() {
         const expCat = document.getElementById('expCategory'); expCat.innerHTML = '';
         state.categories.forEach(c => expCat.innerHTML += `<option value="${c}">${c}</option>`);
-
         const incCli = document.getElementById('incClient'); incCli.innerHTML = '';
         state.clients.forEach(c => incCli.innerHTML += `<option value="${c}">${c}</option>`);
     }
 
     function changeBusiness() {
-        state.currentBusiness = document.getElementById('businessSelect').value;
-        saveConfig();
-        calculateMainBalance();
+        state.currentBusiness = document.getElementById('businessSelect').value; saveConfig(); calculateMainBalance();
         if(window.innerWidth >= 800 && document.getElementById('screen-report').classList.contains('active')) generateReport();
     }
 
@@ -613,7 +562,7 @@
 
     function openModal(type) {
         currentModalTarget = type;
-        document.getElementById('modalTitle').innerText = type === 'category' ? 'Нова категорія витрат' : 'Нове джерело прибутку';
+        document.getElementById('modalTitle').innerText = type === 'category' ? 'Нова категорія' : 'Новий клієнт';
         document.getElementById('modalInput').value = '';
         document.getElementById('directoryModal').classList.add('active');
     }

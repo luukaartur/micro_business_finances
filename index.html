@@ -73,7 +73,6 @@
             .content-panel .screen.active { display: flex !important; }
             .back-link { display: none !important; }
             .action-grid { margin-top: 40px !important; }
-            #auth-screen-box { grid-column: span 2; display: flex; justify-content: center; align-items: center; min-height: 400px; }
         }
 
         @media (max-width: 799px) {
@@ -82,16 +81,15 @@
             .content-panel { display: contents; }
         }
 
-        /* ЧИСТИЙ ЕКРАН ВХОДУ БЕЗ ТАБЛИЧОК */
-        .auth-container {
+        /* ОВЕРЛЕЙ ХОДИТЬ ПО ЦЕНТРУ ДО ЛОГІНУ */
+        .auth-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-light);
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            flex-grow: 1;
-            text-align: center;
-            padding: 20px;
-            background: transparent;
+            align-items: center;
+            z-index: 9999;
         }
 
         .btn-google-login { 
@@ -133,7 +131,7 @@
         .screen-title { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 30px; }
         
         .huge-amount-container { margin-bottom: 30px; border-bottom: 3px solid var(--dark-graphite); padding-bottom: 4px; }
-        .huge-amount-input { width: 100%; border: none; font-size: 48px; font-weight: 900; outline: none; color: var(--dark-graphite); }
+        .huge-amount-input { width: 100%; border: none; font-size: 48px; font-weight: 900; outline: none; color: var(--dark-graphite); background: transparent; }
 
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--gray-text); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -163,19 +161,22 @@
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 100px); background-color: var(--dark-graphite); color: white; padding: 16px 32px; border-radius: 30px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200; }
         .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
-        .pc-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--gray-text); text-align: center; font-size: 16px; font-weight: 500; }
+        @media (min-width: 800px) {
+            .pc-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--gray-text); text-align: center; font-size: 16px; font-weight: 500; }
+        }
+        @media (max-width: 799px) {
+            .pc-placeholder { display: none !important; }
+        }
     </style>
 </head>
 <body>
 
-<div class="app-container">
-    <div id="appToast" class="toast">Завантаження...</div>
+<div id="auth-overlay" class="auth-overlay">
+    <button class="btn-google-login" onclick="loginWithGoogle()">Увійти через Google акаунт</button>
+</div>
 
-    <div id="auth-screen-box">
-        <div id="screen-auth" class="auth-container" style="display: flex;">
-            <button class="btn-google-login" onclick="loginWithGoogle()">Увійти через Google акаунт</button>
-        </div>
-    </div>
+<div class="app-container" id="app-main-layout" style="display: none;">
+    <div id="appToast" class="toast">Завантаження...</div>
 
     <div id="screen-main" class="screen sidebar-panel">
         <div class="app-header">
@@ -198,7 +199,7 @@
         </div>
     </div>
 
-    <div class="content-panel" id="main-content-wrapper" style="display: none;">
+    <div class="content-panel">
         
         <div id="pc-blank" class="pc-placeholder">
             <span>← Оберіть дію ліворуч, щоб почати роботу</span>
@@ -301,7 +302,6 @@
 </div>
 
 <script>
-    // Налаштування твоїх Google ключів
     const SPREADSHEET_ID = '1aIEYM9GitfHJ9Eikw9sBTBarSw97ojSYutqqEznRbIc';
     const CLIENT_ID = '630137342173-710gjc52mpk3khcdosbkvmgla7h8sppi.apps.googleusercontent.com';
 
@@ -323,10 +323,8 @@
 
     let tokenClient;
     
-    // Безпечна ініціалізація клієнта
     function initGoogleClient() {
         if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-            console.log("Очікування завантаження Google SDK...");
             setTimeout(initGoogleClient, 200);
             return;
         }
@@ -337,27 +335,42 @@
             callback: (tokenResponse) => {
                 if (tokenResponse && tokenResponse.access_token) {
                     googleToken = tokenResponse.access_token;
+                    
+                    // Зберігаємо токен та час його смерті (+1 година)
+                    const expireTime = Date.now() + (tokenResponse.expires_in * 1000);
+                    localStorage.setItem('g_token', googleToken);
+                    localStorage.setItem('g_token_expires', expireTime);
+
                     showToast("Авторизація успішна!");
                     initAppAfterLogin();
                 }
             },
         });
+
+        // ПЕРЕВІРКА ІСНУЮЧОЇ СЕСІЇ (щоб не вилітало)
+        const savedToken = localStorage.getItem('g_token');
+        const expireTime = localStorage.getItem('g_token_expires');
+        
+        if (savedToken && expireTime && Date.now() < parseInt(expireTime)) {
+            googleToken = savedToken;
+            initAppAfterLogin();
+        }
     }
 
     window.addEventListener('DOMContentLoaded', initGoogleClient);
 
-    // Функція входу із захистом від асинхронного "undefined" стану
     function loginWithGoogle() { 
         if (typeof tokenClient === 'undefined' || !tokenClient) {
-            alert("Сервіси авторизації Google ще завантажуються або заблоковані розширенням (AdBlock/Brave Shield). Спробуй вимкнути захист або оновити сторінку.");
+            alert("Сервіси авторизації ще завантажуються або заблоковані Вашим AdBlock. Вимкніть його або оновіть сторінку.");
             return;
         }
         tokenClient.requestAccessToken({ prompt: 'consent' }); 
     }
 
     function initAppAfterLogin() {
-        document.getElementById('auth-screen-box').style.display = 'none';
-        document.getElementById('main-content-wrapper').style.display = 'block';
+        // Ховаємо стартовий екран-оверлей, показуємо чистий додаток
+        document.getElementById('auth-overlay').style.display = 'none';
+        document.getElementById('app-main-layout').style.display = 'flex';
         
         const isDesktop = window.innerWidth >= 800;
         if(isDesktop) {
@@ -385,6 +398,15 @@
                 headers: { 'Authorization': `Bearer ${googleToken}` }
             });
             let metadata = await metadataResp.json();
+            
+            if(metadata.error && metadata.error.status === "UNAUTHENTICATED") {
+                // Токен прострочився в процесі
+                localStorage.removeItem('g_token');
+                document.getElementById('auth-overlay').style.display = 'flex';
+                document.getElementById('app-main-layout').style.display = 'none';
+                return;
+            }
+
             let sheetExists = metadata.sheets.some(s => s.properties.title === currentYear);
 
             if (!sheetExists) {
@@ -415,7 +437,7 @@
             showToast("Дані оновлено!");
         } catch (err) {
             console.error(err);
-            showToast("Помилка зв'язку з Google.");
+            showToast("Помилка зв'язку.");
         }
     }
 

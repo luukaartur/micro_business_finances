@@ -58,18 +58,23 @@
                 display: grid;
                 grid-template-columns: 380px 1fr;
                 gap: 60px;
+                align-items: start; /* Щоб ліва панель не розтягувалася по висоті */
             }
             .sidebar-panel {
                 border-right: 1px solid var(--border);
                 padding-right: 40px;
                 display: flex;
                 flex-direction: column;
-                height: 100%;
+                height: auto; /* Виправляємо висоту */
             }
-            .content-panel { display: block; min-height: 500px; }
-            .screen { display: none !important; }
+            .content-panel { 
+                display: block; 
+                min-height: 500px;
+                width: 100%; /* Гарантуємо, що права панель займає всю ширину своєї колонки */
+            }
+            .screen { display: none !important; width: 100%; } /* Скидаємо мобільні стилі для екранів */
             #screen-main { display: flex !important; }
-            .content-panel .screen.active { display: flex !important; }
+            .content-panel .screen.active { display: flex !important; flex-direction: column; }
             .back-link { display: none !important; }
             .action-grid { margin-top: 40px !important; }
         }

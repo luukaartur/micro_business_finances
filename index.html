@@ -58,21 +58,25 @@
                 display: grid;
                 grid-template-columns: 380px 1fr;
                 gap: 60px;
-                align-items: start; /* Щоб ліва панель не розтягувалася по висоті */
+                align-items: start;
             }
             .sidebar-panel {
                 border-right: 1px solid var(--border);
                 padding-right: 40px;
                 display: flex;
                 flex-direction: column;
-                height: auto; /* Виправляємо висоту */
+                height: auto;
             }
             .content-panel { 
                 display: block; 
                 min-height: 500px;
-                width: 100%; /* Гарантуємо, що права панель займає всю ширину своєї колонки */
+                width: 100%;
             }
-            .screen { display: none !important; width: 100%; } /* Скидаємо мобільні стилі для екранів */
+            .screen { 
+                display: none !important; 
+                width: 100%; 
+                flex-direction: column; 
+            }
             #screen-main { display: flex !important; }
             .content-panel .screen.active { display: flex !important; flex-direction: column; }
             .back-link { display: none !important; }
@@ -135,8 +139,8 @@
         .select-combo { display: flex; gap: 10px; }
         .btn-plus-inline { width: 54px; height: 54px; border-radius: 14px; border: 2px solid var(--dark-graphite); background-color: transparent; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        .staff-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-        .staff-item { background: var(--bg-light); padding: 18px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .staff-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; width: 100%; }
+        .staff-item { background: var(--bg-light); padding: 18px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; width: 100%; }
         .staff-name { font-size: 18px; font-weight: 700; }
         .staff-debt { font-size: 16px; font-weight: 800; color: #D9383A; }
         .staff-debt.zero { color: var(--gray-text); }
@@ -307,7 +311,7 @@
             <button class="btn-main btn-outline" style="height: 44px; font-size: 14px;" onclick="setPayAmountFull()">Повністю</button>
         </div>
         <div class="form-group">
-            <label>Або введіть суму вручную</label>
+            <label>Або введіть суму вручну</label>
             <input type="number" id="payoutCustomAmount" class="standard-input" placeholder="0">
         </div>
         <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -349,6 +353,9 @@
         if (!googleToken || !expireTime || Date.now() > parseInt(expireTime) - 60000) { 
             showToast("Оновлення сесії...");
             return new Promise((resolve) => {
+                if (typeof tokenClient === 'undefined' || !tokenClient) {
+                    initGoogleClient();
+                }
                 tokenClient.callback = (tokenResponse) => {
                     if (tokenResponse && tokenResponse.access_token) {
                         googleToken = tokenResponse.access_token;
@@ -366,7 +373,6 @@
 
     function initGoogleClient() {
         if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
-            setTimeout(initGoogleClient, 200);
             return;
         }
         
@@ -393,10 +399,12 @@
     }
 
     window.addEventListener('DOMContentLoaded', initGoogleClient);
+    window.addEventListener('load', initGoogleClient);
 
     function loginWithGoogle() { 
         if (typeof tokenClient === 'undefined' || !tokenClient) {
-            alert("Сервіси авторизації заблоковані Блокувальником реклами.");
+            showToast("Завантаження сервісів Google... Спробуйте ще раз");
+            initGoogleClient();
             return;
         }
         tokenClient.requestAccessToken({ prompt: 'consent' }); 
@@ -433,7 +441,6 @@
             });
             let metadata = await metadataResp.json();
             
-            // Створення вкладки поточного року
             if(!metadata.sheets.some(s => s.properties.title === currentYear)) {
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
                     method: 'POST',
@@ -443,7 +450,6 @@
                 await appendRowToSheet(currentYear, ["ID", "Дата", "Бренд", "Тип", "Назва", "Ціна", "Кількість", "Разом", "Категорія/Клієнт"]);
             }
 
-            // Створення вкладки для персоналу Salaries_Database
             if(!metadata.sheets.some(s => s.properties.title === "Salaries_Database")) {
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
                     method: 'POST',
@@ -453,7 +459,6 @@
                 await appendRowToSheet("Salaries_Database", ["ID", "Дата", "Бренд", "Працівниця", "Тип Операції", "Деталі роботи", "Сума"]);
             }
 
-            // Читання фінансів
             let dataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${currentYear}!A2:I10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let dataRows = await dataResp.json();
             transactionsDatabase = [];
@@ -467,7 +472,6 @@
                 });
             }
 
-            // Читання зарплатного логу
             let staffResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Salaries_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let staffRows = await staffResp.json();
             staffLogDatabase = [];
@@ -531,7 +535,6 @@
 
     function openPaymentsScreen() { goToScreen('screen-payments'); renderStaffList(); }
 
-    // Вираховує чистий борг перед майстринями для поточного бренду
     function getStaffDebtsMap() {
         let debts = {};
         staffLogDatabase.forEach(item => {
@@ -549,7 +552,6 @@
         container.innerHTML = '';
         const debts = getStaffDebtsMap();
         
-        // Збираємо унікальні імена для цього бренду
         let staffNames = new Set();
         staffLogDatabase.forEach(i => { if(i.business === state.currentBusiness) staffNames.add(i.name); });
 
@@ -581,7 +583,6 @@
         goToScreen('screen-staff-profile');
     }
 
-    // Додавання виконаної роботи (нарахування боргу)
     async function handleSaveJob(e) {
         e.preventDefault();
         showToast("Запис роботи...");
@@ -612,7 +613,6 @@
         document.getElementById('payoutCustomAmount').value = debts[selectedStaffName] || 0;
     }
 
-    // Здійснення оплати (Скидання боргу + Витрата в загальну касу)
     async function submitPayout() {
         const amount = parseFloat(document.getElementById('payoutCustomAmount').value);
         if(!amount || amount <= 0) { alert("Введіть коректну суму"); return; }
@@ -622,10 +622,7 @@
         const dateStr = new Date().toISOString().split('T')[0];
         const currentYear = new Date().getFullYear().toString();
 
-        // 1. Запис у Salaries_Database про ліквідацію внутрішнього боргу
         const rowSalary = [Date.now().toString(), dateStr, state.currentBusiness, selectedStaffName, 'виплата', 'Видача заробітної плати', amount];
-        
-        // 2. Запис у загальну фінансову відомість як вихідний потік витрат
         const rowFinance = [Date.now().toString(), dateStr, state.currentBusiness, 'витрата', `Виплата: ${selectedStaffName}`, amount, 1, amount, 'Оплата робіт'];
 
         try {
@@ -636,11 +633,9 @@
         } catch(e) { showToast("Помилка при проведенні платежу."); }
     }
 
-    // Екран аналітики виплат майстриням
     function openStaffAnalytics() {
         goToScreen('screen-staff-analytics');
         
-        // Підраховуємо скільки сумарно КОЖНІЙ виплачено за Весь час для цього бренду
         let staffPayouts = {};
         staffLogDatabase.forEach(item => {
             if(item.business === state.currentBusiness && item.type === 'виплата') {
@@ -816,7 +811,6 @@
             if(currentModalTarget === 'jobType' && !state.jobTypes.includes(val)) state.jobTypes.push(val);
             
             if(currentModalTarget === 'staff') {
-                // Створення нової працівниці через надсилання першого нульового нарахування на Диск
                 closeModal();
                 showToast("Реєстрація працівниці...");
                 const dateStr = new Date().toISOString().split('T')[0];

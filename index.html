@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <link rel="icon" type="image/png" href="icon.png">
-    <link rel="apple-touch-icon" href="icon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Micro Accounting Dashboard</title>
     
-    <script src="https://accounts.google.com/gsi/client"></script>
+    <link rel="apple-touch-icon" href="icon.png">  <link rel="icon" type="image/png" href="icon.png"> <script src="https://accounts.google.com/gsi/client"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         :root {
-            --bahama-yellow: #E19E11; /* Твій улюблений Porsche 911 Classic Yellow */
-            --dark-graphite: #1C1C1E;  /* Глибокий темний графіт */
+            --bahama-yellow: #E19E11; /* Porsche 911 Classic Yellow */
+            --dark-graphite: #1C1C1E;  
             --bg-light: #F4F4F6;       
             --card-bg: #FFFFFF;
             --border: #E5E5EA;
@@ -38,7 +36,6 @@
             align-items: flex-start;
         }
 
-        /* КОНТЕЙНЕР АДАПТИВНОЇ СІТКИ */
         .app-container {
             width: 100%;
             max-width: 440px;
@@ -83,7 +80,6 @@
             .content-panel { display: contents; }
         }
 
-        /* ОВЕРЛЕЙ ХОДИТЬ ПО ЦЕНТРУ ДО ЛОГІНУ */
         .auth-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -96,23 +92,14 @@
 
         .btn-google-login { 
             background: var(--dark-graphite); 
-            color: white; 
-            border: none; 
-            padding: 18px 36px; 
-            font-size: 16px; 
-            font-weight: 700; 
-            border-radius: 16px; 
-            cursor: pointer; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-            transition: background 0.2s;
+            color: white; border: none; padding: 18px 36px; 
+            font-size: 16px; font-weight: 700; border-radius: 16px; 
+            cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.08);
         }
-        .btn-google-login:hover { background: #3a3a3c; }
 
-        /* ІНТЕРФЕЙС ДАШБОРДУ */
         .app-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
         .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--gray-text); font-weight: 700; margin-bottom: 6px; }
         .business-selector { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; border: none; background: transparent; color: var(--dark-graphite); cursor: pointer; outline: none; }
-        
         .btn-settings { background: var(--bg-light); border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         .balance-card { padding: 30px 0; }
@@ -121,14 +108,13 @@
 
         .action-grid { display: flex; flex-direction: column; gap: 12px; margin-top: auto; }
         
-        .btn-main { width: 100%; height: 60px; border-radius: 16px; font-size: 18px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s ease; }
+        .btn-main { width: 100%; height: 60px; border-radius: 16px; font-size: 18px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s ease; text-decoration: none; }
         .btn-main:active { transform: scale(0.98); }
         .btn-yellow { background-color: var(--bahama-yellow); color: white; }
         .btn-dark { background-color: var(--dark-graphite); color: white; }
         .btn-outline { background-color: transparent; border: 2px solid var(--dark-graphite); color: var(--dark-graphite); }
         .btn-main.selected { border: 3px solid var(--dark-graphite); box-shadow: 0 0 10px rgba(0,0,0,0.1); }
 
-        /* ТИПОГРАФІКА ФОРМ */
         .back-link { font-size: 16px; font-weight: 600; color: var(--dark-graphite); cursor: pointer; margin-bottom: 24px; display: inline-block; }
         .screen-title { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 30px; }
         
@@ -144,7 +130,12 @@
         .select-combo { display: flex; gap: 10px; }
         .btn-plus-inline { width: 54px; height: 54px; border-radius: 14px; border: 2px solid var(--dark-graphite); background-color: transparent; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-        /* ЗВІТНІСТЬ */
+        .staff-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .staff-item { background: var(--bg-light); padding: 18px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .staff-name { font-size: 18px; font-weight: 700; }
+        .staff-debt { font-size: 16px; font-weight: 800; color: #D9383A; }
+        .staff-debt.zero { color: var(--gray-text); }
+
         .date-range-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .report-summary { background-color: var(--bg-light); border-radius: 16px; padding: 20px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .summary-block { display: flex; flex-direction: column; }
@@ -154,7 +145,6 @@
         .text-expense { color: #D9383A; }
         .chart-container { position: relative; width: 100%; height: 280px; margin-top: 20px; }
 
-        /* МОДАЛКА ТА ТОСТ */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
         .modal-overlay.active { display: flex; }
         .modal-card { background: white; border-radius: 20px; padding: 24px; width: 100%; max-width: 360px; }
@@ -163,12 +153,8 @@
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 100px); background-color: var(--dark-graphite); color: white; padding: 16px 32px; border-radius: 30px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200; }
         .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
-        @media (min-width: 800px) {
-            .pc-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--gray-text); text-align: center; font-size: 16px; font-weight: 500; }
-        }
-        @media (max-width: 799px) {
-            .pc-placeholder { display: none !important; }
-        }
+        @media (min-width: 800px) { .pc-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--gray-text); text-align: center; font-size: 16px; font-weight: 500; } }
+        @media (max-width: 799px) { .pc-placeholder { display: none !important; } }
     </style>
 </head>
 <body>
@@ -197,6 +183,7 @@
         <div class="action-grid">
             <button id="btn-nav-expense" class="btn-main btn-yellow" onclick="goToScreen('screen-expense')">➕ Додати витрату</button>
             <button id="btn-nav-income" class="btn-main btn-outline" onclick="goToScreen('screen-income')">💵 Додати прибуток</button>
+            <button id="btn-nav-payments" class="btn-main btn-outline" onclick="openPaymentsScreen()">👩‍🎨 Оплати майстриням</button>
             <button id="btn-nav-report" class="btn-main btn-dark" onclick="openReportScreen()">📊 Звітність</button>
         </div>
     </div>
@@ -211,27 +198,10 @@
             <span class="back-link" onclick="goToScreen('screen-main')">← Головна</span>
             <h2 class="screen-title">Додати витрату</h2>
             <form id="expenseForm" onsubmit="handleSaveExpense(event)">
-                <div class="form-group">
-                    <label>Сума витрати (₴)</label>
-                    <div class="huge-amount-container">
-                        <input type="number" id="expPrice" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Найменування</label>
-                    <input type="text" id="expName" class="standard-input" placeholder="Наприклад: Фурнітура" required>
-                </div>
-                <div class="form-group">
-                    <label>Кількість</label>
-                    <input type="number" id="expQty" class="standard-input" value="1" inputmode="decimal" step="any" required>
-                </div>
-                <div class="form-group">
-                    <label>Категорія</label>
-                    <div class="select-combo">
-                        <select id="expCategory" class="standard-select" required></select>
-                        <button type="button" class="btn-plus-inline" onclick="openModal('category')">+</button>
-                    </div>
-                </div>
+                <div class="form-group"><label>Сума витрати (₴)</label><div class="huge-amount-container"><input type="number" id="expPrice" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required></div></div>
+                <div class="form-group"><label>Найменування</label><input type="text" id="expName" class="standard-input" placeholder="Наприклад: Фурнітура" required></div>
+                <div class="form-group"><label>Кількість</label><input type="number" id="expQty" class="standard-input" value="1" inputmode="decimal" step="any" required></div>
+                <div class="form-group"><label>Категорія</label><div class="select-combo"><select id="expCategory" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('category')">+</button></div></div>
                 <button type="submit" class="btn-main btn-dark" style="margin-top: 20px;">Записати витрату</button>
             </form>
         </div>
@@ -240,25 +210,47 @@
             <span class="back-link" onclick="goToScreen('screen-main')">← Головна</span>
             <h2 class="screen-title">Додати прибуток</h2>
             <form id="incomeForm" onsubmit="handleSaveIncome(event)">
-                <div class="form-group">
-                    <label>Сума прибутку (₴)</label>
-                    <div class="huge-amount-container">
-                        <input type="number" id="incAmount" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>За що</label>
-                    <input type="text" id="incName" class="standard-input" placeholder="Наприклад: Продаж сумочки" required>
-                </div>
-                <div class="form-group">
-                    <label>Від кого</label>
-                    <div class="select-combo">
-                        <select id="incClient" class="standard-select" required></select>
-                        <button type="button" class="btn-plus-inline" onclick="openModal('client')">+</button>
-                    </div>
-                </div>
+                <div class="form-group"><label>Сума прибутку (₴)</label><div class="huge-amount-container"><input type="number" id="incAmount" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required></div></div>
+                <div class="form-group"><label>За що</label><input type="text" id="incName" class="standard-input" placeholder="Наприклад: Продаж сумочки" required></div>
+                <div class="form-group"><label>Від кого</label><div class="select-combo"><select id="incClient" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('client')">+</button></div></div>
                 <button type="submit" class="btn-main btn-dark" style="margin-top: 20px;">Записати прибуток</button>
             </form>
+        </div>
+
+        <div id="screen-payments" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Головна</span>
+            <h2 class="screen-title">Оплати праці</h2>
+            <div class="staff-list" id="staffListContainer"></div>
+            <button class="btn-main btn-outline" onclick="openModal('staff')">👤 Додати працівни_цю</button>
+            <button class="btn-main btn-dark" style="margin-top: 12px;" onclick="openStaffAnalytics()">📊 Аналіз оплати праці</button>
+        </div>
+
+        <div id="screen-staff-profile" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-payments')">← До списку</span>
+            <h2 class="screen-title" id="profileStaffName">Майстриня</h2>
+            
+            <div class="balance-card" style="padding: 10px 0 30px 0;">
+                <div class="balance-label">Нараховано до виплати</div>
+                <div class="balance-amount" id="profileStaffDebt" style="color: #D9383A;">0 ₴</div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 40px;">
+                <button class="btn-main btn-yellow" onclick="openPayModal()">💰 Оплатити</button>
+            </div>
+
+            <h3 style="margin-bottom: 15px; font-weight: 800;">Додати виконану роботу</h3>
+            <form id="jobForm" onsubmit="handleSaveJob(event)">
+                <div class="form-group"><label>Тип роботи / Послуга</label><div class="select-combo"><select id="jobType" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('jobType')">+</button></div></div>
+                <div class="form-group"><label>Вартість роботи (₴)</label><input type="number" id="jobPrice" class="standard-input" placeholder="0" inputmode="decimal" required></div>
+                <div class="form-group"><label>Кількість</label><input type="number" id="jobQty" class="standard-input" value="1" inputmode="decimal" required></div>
+                <button type="submit" class="btn-main btn-dark">Нарахувати роботу</button>
+            </form>
+        </div>
+
+        <div id="screen-staff-analytics" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-payments')">← Оплати</span>
+            <h2 class="screen-title">Аналіз оплати</h2>
+            <div class="chart-container"><canvas id="staffChart"></canvas></div>
         </div>
 
         <div id="screen-report" class="screen">
@@ -303,28 +295,70 @@
     </div>
 </div>
 
+<div id="payoutModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-title">Виплата зарплати</div>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <button class="btn-main btn-outline" style="height: 44px; font-size: 14px;" onclick="setPayAmountFull()">Повністю</button>
+        </div>
+        <div class="form-group">
+            <label>Або введіть суму вручную</label>
+            <input type="number" id="payoutCustomAmount" class="standard-input" placeholder="0">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="btn-main btn-outline" style="height: 46px; font-size: 15px;" onclick="closePayoutModal()">Скасувати</button>
+            <button class="btn-main btn-dark" style="height: 46px; font-size: 15px;" onclick="submitPayout()">ОК</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const SPREADSHEET_ID = '1aIEYM9GitfHJ9Eikw9sBTBarSw97ojSYutqqEznRbIc';
     const CLIENT_ID = '630137342173-710gjc52mpk3khcdosbkvmgla7h8sppi.apps.googleusercontent.com';
 
     let googleToken = null;
     let currentChartInstance = null;
+    let staffChartInstance = null;
     let currentModalTarget = '';
+    let selectedStaffName = ''; 
 
-    let state = JSON.parse(localStorage.getItem('micro_accounting_v3')) || {
+    let state = JSON.parse(localStorage.getItem('micro_accounting_v4')) || {
         currentBusiness: "Якзаманеться",
         businesses: ["Якзаманеться"],
-        categories: ["Матеріали", "Фурнітура", "Логістика", "Пакування"],
-        clients: ["Роздріб", "Instagram", "Власний сайт"]
+        categories: ["Матеріали", "Фурнітура", "Логістика", "Пакування", "Оплата робіт"],
+        clients: ["Роздріб", "Instagram", "Власний сайт"],
+        jobTypes: ["Пошиття", "Збірка", "Крій", "Дизайн"]
     };
 
     let transactionsDatabase = [];
+    let staffLogDatabase = []; 
 
-    function saveConfig() { localStorage.setItem('micro_accounting_v3', JSON.stringify(state)); }
+    function saveConfig() { localStorage.setItem('micro_accounting_v4', JSON.stringify(state)); }
     function showToast(text) { const toast = document.getElementById('appToast'); toast.innerText = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2000); }
 
     let tokenClient;
     
+    // Автоматичне тихе переоформлення токена перед запитами
+    async function ensureValidToken() {
+        const expireTime = localStorage.getItem('g_token_expires');
+        if (!googleToken || !expireTime || Date.now() > parseInt(expireTime) - 60000) { 
+            showToast("Оновлення сесії...");
+            return new Promise((resolve) => {
+                tokenClient.callback = (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        googleToken = tokenResponse.access_token;
+                        const newExpire = Date.now() + (tokenResponse.expires_in * 1000);
+                        localStorage.setItem('g_token', googleToken);
+                        localStorage.setItem('g_token_expires', newExpire);
+                        resolve(true);
+                    }
+                };
+                tokenClient.requestAccessToken({ prompt: 'none' }); 
+            });
+        }
+        return true;
+    }
+
     function initGoogleClient() {
         if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
             setTimeout(initGoogleClient, 200);
@@ -337,22 +371,16 @@
             callback: (tokenResponse) => {
                 if (tokenResponse && tokenResponse.access_token) {
                     googleToken = tokenResponse.access_token;
-                    
-                    // Зберігаємо токен та час його смерті (+1 година)
                     const expireTime = Date.now() + (tokenResponse.expires_in * 1000);
                     localStorage.setItem('g_token', googleToken);
                     localStorage.setItem('g_token_expires', expireTime);
-
-                    showToast("Авторизація успішна!");
                     initAppAfterLogin();
                 }
             },
         });
 
-        // ПЕРЕВІРКА ІСНУЮЧОЇ СЕСІЇ (щоб не вилітало)
         const savedToken = localStorage.getItem('g_token');
         const expireTime = localStorage.getItem('g_token_expires');
-        
         if (savedToken && expireTime && Date.now() < parseInt(expireTime)) {
             googleToken = savedToken;
             initAppAfterLogin();
@@ -363,19 +391,17 @@
 
     function loginWithGoogle() { 
         if (typeof tokenClient === 'undefined' || !tokenClient) {
-            alert("Сервіси авторизації ще завантажуються або заблоковані Вашим AdBlock. Вимкніть його або оновіть сторінку.");
+            alert("Сервіси авторизації заблоковані Блокувальником реклами.");
             return;
         }
         tokenClient.requestAccessToken({ prompt: 'consent' }); 
     }
 
     function initAppAfterLogin() {
-        // Ховаємо стартовий екран-оверлей, показуємо чистий додаток
         document.getElementById('auth-overlay').style.display = 'none';
         document.getElementById('app-main-layout').style.display = 'flex';
         
-        const isDesktop = window.innerWidth >= 800;
-        if(isDesktop) {
+        if(window.innerWidth >= 800) {
             document.getElementById('screen-main').style.display = 'flex';
         } else {
             document.getElementById('screen-main').classList.add('active');
@@ -392,6 +418,7 @@
     }
 
     async function syncWithGoogleSheets() {
+        await ensureValidToken();
         showToast("Синхронізація з Диском...");
         const currentYear = new Date().getFullYear().toString();
 
@@ -401,17 +428,8 @@
             });
             let metadata = await metadataResp.json();
             
-            if(metadata.error && metadata.error.status === "UNAUTHENTICATED") {
-                // Токен прострочився в процесі
-                localStorage.removeItem('g_token');
-                document.getElementById('auth-overlay').style.display = 'flex';
-                document.getElementById('app-main-layout').style.display = 'none';
-                return;
-            }
-
-            let sheetExists = metadata.sheets.some(s => s.properties.title === currentYear);
-
-            if (!sheetExists) {
+            // Створення вкладки поточного року
+            if(!metadata.sheets.some(s => s.properties.title === currentYear)) {
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
@@ -420,11 +438,19 @@
                 await appendRowToSheet(currentYear, ["ID", "Дата", "Бренд", "Тип", "Назва", "Ціна", "Кількість", "Разом", "Категорія/Клієнт"]);
             }
 
-            let dataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${currentYear}!A2:I10000`, {
-                headers: { 'Authorization': `Bearer ${googleToken}` }
-            });
-            let dataRows = await dataResp.json();
+            // Створення вкладки для персоналу Salaries_Database
+            if(!metadata.sheets.some(s => s.properties.title === "Salaries_Database")) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: "Salaries_Database" } } }] })
+                });
+                await appendRowToSheet("Salaries_Database", ["ID", "Дата", "Бренд", "Працівниця", "Тип Операції", "Деталі роботи", "Сума"]);
+            }
 
+            // Читання фінансів
+            let dataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${currentYear}!A2:I10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let dataRows = await dataResp.json();
             transactionsDatabase = [];
             if (dataRows.values) {
                 dataRows.values.forEach(row => {
@@ -435,15 +461,27 @@
                     });
                 });
             }
+
+            // Читання зарплатного логу
+            let staffResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Salaries_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let staffRows = await staffResp.json();
+            staffLogDatabase = [];
+            if(staffRows.values) {
+                staffRows.values.forEach(row => {
+                    staffLogDatabase.push({
+                        business: row[2], name: row[3], type: row[4], jobTitle: row[5], amount: parseFloat(row[6]) || 0
+                    });
+                });
+            }
+
             calculateMainBalance();
+            renderStaffList();
             showToast("Дані оновлено!");
-        } catch (err) {
-            console.error(err);
-            showToast("Помилка зв'язку.");
-        }
+        } catch (err) { console.error(err); showToast("Помилка зв'язку."); }
     }
 
     async function appendRowToSheet(sheetName, rowData) {
+        await ensureValidToken();
         await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!A:A:append?valueInputOption=USER_ENTERED`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
@@ -452,12 +490,10 @@
     }
 
     function goToScreen(screenId) {
-        document.getElementById('btn-nav-expense').classList.remove('selected');
-        document.getElementById('btn-nav-income').classList.remove('selected');
-        document.getElementById('btn-nav-report').classList.remove('selected');
-
+        document.querySelectorAll('.action-grid .btn-main').forEach(b => b.classList.remove('selected'));
         if(screenId === 'screen-expense') document.getElementById('btn-nav-expense').classList.add('selected');
         if(screenId === 'screen-income') document.getElementById('btn-nav-income').classList.add('selected');
+        if(screenId === 'screen-payments') document.getElementById('btn-nav-payments').classList.add('selected');
         if(screenId === 'screen-report') document.getElementById('btn-nav-report').classList.add('selected');
 
         const isDesktop = window.innerWidth >= 800;
@@ -488,6 +524,151 @@
         document.getElementById('mainBalance').innerText = `${balance.toLocaleString('uk-UA')} ₴`;
     }
 
+    function openPaymentsScreen() { goToScreen('screen-payments'); renderStaffList(); }
+
+    // Вираховує чистий борг перед майстринями для поточного бренду
+    function getStaffDebtsMap() {
+        let debts = {};
+        staffLogDatabase.forEach(item => {
+            if(item.business === state.currentBusiness) {
+                if(!debts[item.name]) debts[item.name] = 0;
+                if(item.type === 'нарахування') debts[item.name] += item.amount;
+                if(item.type === 'виплата') debts[item.name] -= item.amount;
+            }
+        });
+        return debts;
+    }
+
+    function renderStaffList() {
+        const container = document.getElementById('staffListContainer');
+        container.innerHTML = '';
+        const debts = getStaffDebtsMap();
+        
+        // Збираємо унікальні імена для цього бренду
+        let staffNames = new Set();
+        staffLogDatabase.forEach(i => { if(i.business === state.currentBusiness) staffNames.add(i.name); });
+
+        if(staffNames.size === 0) {
+            container.innerHTML = '<p style="color: var(--gray-text); text-align:center; padding: 20px 0;">Працівниць поки немає</p>';
+            return;
+        }
+
+        staffNames.forEach(name => {
+            const debt = debts[name] || 0;
+            const div = document.createElement('div');
+            div.className = 'staff-item';
+            div.onclick = () => openStaffProfile(name);
+            div.innerHTML = `
+                <span class="staff-name">${name}</span>
+                <span class="staff-debt ${debt === 0 ? 'zero' : ''}">${debt.toLocaleString('uk-UA')} ₴</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function openStaffProfile(name) {
+        selectedStaffName = name;
+        document.getElementById('profileStaffName').innerText = name;
+        const debts = getStaffDebtsMap();
+        const debt = debts[name] || 0;
+        document.getElementById('profileStaffDebt').innerText = `${debt.toLocaleString('uk-UA')} ₴`;
+        document.getElementById('jobForm').reset();
+        goToScreen('screen-staff-profile');
+    }
+
+    // Додавання виконаної роботи (нарахування боргу)
+    async function handleSaveJob(e) {
+        e.preventDefault();
+        showToast("Запис роботи...");
+        const type = document.getElementById('jobType').value;
+        const price = parseFloat(document.getElementById('jobPrice').value);
+        const qty = parseFloat(document.getElementById('jobQty').value);
+        const total = price * qty;
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        const row = [Date.now().toString(), dateStr, state.currentBusiness, selectedStaffName, 'нарахування', `${type} (x${qty})`, total];
+        try {
+            await appendRowToSheet("Salaries_Database", row);
+            await syncWithGoogleSheets();
+            openStaffProfile(selectedStaffName);
+        } catch(e) { showToast("Помилка запису."); }
+    }
+
+    function openPayModal() {
+        const debts = getStaffDebtsMap();
+        const debt = debts[selectedStaffName] || 0;
+        if(debt <= 0) { alert("У цієї майстрині немає накопиченого боргу до виплати."); return; }
+        document.getElementById('payoutCustomAmount').value = debt;
+        document.getElementById('payoutModal').classList.add('active');
+    }
+    function closePayoutModal() { document.getElementById('payoutModal').classList.remove('active'); }
+    function setPayAmountFull() {
+        const debts = getStaffDebtsMap();
+        document.getElementById('payoutCustomAmount').value = debts[selectedStaffName] || 0;
+    }
+
+    // Здійснення оплати (Скидання боргу + Витрата в загальну касу)
+    async function submitPayout() {
+        const amount = parseFloat(document.getElementById('payoutCustomAmount').value);
+        if(!amount || amount <= 0) { alert("Введіть коректну суму"); return; }
+        
+        closePayoutModal();
+        showToast("Проведення виплати...");
+        const dateStr = new Date().toISOString().split('T')[0];
+        const currentYear = new Date().getFullYear().toString();
+
+        // 1. Запис у Salaries_Database про ліквідацію внутрішнього боргу
+        const rowSalary = [Date.now().toString(), dateStr, state.currentBusiness, selectedStaffName, 'виплата', 'Видача заробітної плати', amount];
+        
+        // 2. Запис у загальну фінансову відомість як вихідний потік витрат
+        const rowFinance = [Date.now().toString(), dateStr, state.currentBusiness, 'витрата', `Виплата: ${selectedStaffName}`, amount, 1, amount, 'Оплата робіт'];
+
+        try {
+            await appendRowToSheet("Salaries_Database", rowSalary);
+            await appendRowToSheet(currentYear, rowFinance);
+            await syncWithGoogleSheets();
+            openStaffProfile(selectedStaffName);
+        } catch(e) { showToast("Помилка при проведенні платежу."); }
+    }
+
+    // Екран аналітики виплат майстриням
+    function openStaffAnalytics() {
+        goToScreen('screen-staff-analytics');
+        
+        // Підраховуємо скільки сумарно КОЖНІЙ виплачено за Весь час для цього бренду
+        let staffPayouts = {};
+        staffLogDatabase.forEach(item => {
+            if(item.business === state.currentBusiness && item.type === 'виплата') {
+                staffPayouts[item.name] = (staffPayouts[item.name] || 0) + item.amount;
+            }
+        });
+
+        const ctx = document.getElementById('staffChart').getContext('2d');
+        if(staffChartInstance) staffChartInstance.destroy();
+        
+        const labels = Object.keys(staffPayouts);
+        const values = Object.values(staffPayouts);
+
+        if(labels.length === 0) {
+            ctx.clearRect(0, 0, 400, 400);
+            showToast("Немає даних для діаграми");
+            return;
+        }
+
+        staffChartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#E19E11', '#1C1C1E', '#8E8E93', '#248A3D', '#4478FF', '#FF5252'],
+                    borderWidth: 2, borderColor: '#ffffff'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
     async function handleSaveExpense(e) {
         e.preventDefault();
         showToast("Запис...");
@@ -506,7 +687,7 @@
             document.getElementById('expQty').value = "1";
             await syncWithGoogleSheets();
             goToScreen('screen-main');
-        } catch(e) { showToast("Помилка збереження."); }
+        } catch(e) { showToast("Помилка."); }
     }
 
     async function handleSaveIncome(e) {
@@ -524,7 +705,7 @@
             document.getElementById('incomeForm').reset();
             await syncWithGoogleSheets();
             goToScreen('screen-main');
-        } catch(e) { showToast("Помилка збереження."); }
+        } catch(e) { showToast("Помилка."); }
     }
 
     function openReportScreen() { goToScreen('screen-report'); generateReport(); }
@@ -550,13 +731,9 @@
         document.getElementById('repNetBalance').innerText = `${net.toLocaleString('uk-UA')} ₴`;
         document.getElementById('repNetBalance').style.color = net >= 0 ? '#248A3D' : '#D9383A';
 
-        renderPieChart(categoryData);
-    }
-
-    function renderPieChart(dataObj) {
         const ctx = document.getElementById('expenseChart').getContext('2d');
         if(currentChartInstance) currentChartInstance.destroy();
-        const labels = Object.keys(dataObj); const dataValues = Object.values(dataObj);
+        const labels = Object.keys(categoryData); const dataValues = Object.values(categoryData);
         if(labels.length === 0) return;
 
         currentChartInstance = new Chart(ctx, {
@@ -585,13 +762,23 @@
     function populateDropdowns() {
         const expCat = document.getElementById('expCategory'); expCat.innerHTML = '';
         state.categories.forEach(c => expCat.innerHTML += `<option value="${c}">${c}</option>`);
+        
         const incCli = document.getElementById('incClient'); incCli.innerHTML = '';
         state.clients.forEach(c => incCli.innerHTML += `<option value="${c}">${c}</option>`);
+
+        const jobDrop = document.getElementById('jobType'); jobDrop.innerHTML = '';
+        state.jobTypes.forEach(j => jobDrop.innerHTML += `<option value="${j}">${j}</option>`);
     }
 
     function changeBusiness() {
-        state.currentBusiness = document.getElementById('businessSelect').value; saveConfig(); calculateMainBalance();
-        if(window.innerWidth >= 800 && document.getElementById('screen-report').classList.contains('active')) generateReport();
+        state.currentBusiness = document.getElementById('businessSelect').value; 
+        saveConfig(); 
+        calculateMainBalance();
+        renderStaffList();
+        if(window.innerWidth >= 800) {
+            if(document.getElementById('screen-report').classList.contains('active')) generateReport();
+            if(document.getElementById('screen-staff-analytics').classList.contains('active')) openStaffAnalytics();
+        }
     }
 
     function handleCreateBusiness() {
@@ -604,17 +791,36 @@
 
     function openModal(type) {
         currentModalTarget = type;
-        document.getElementById('modalTitle').innerText = type === 'category' ? 'Нова категорія' : 'Новий клієнт';
+        let title = 'Додати';
+        if(type==='category') title='Нова категорія';
+        if(type==='client') title='Новий клієнт';
+        if(type==='jobType') title='Новий тип роботи';
+        if(type==='staff') title='Нова працівниця';
+        
+        document.getElementById('modalTitle').innerText = title;
         document.getElementById('modalInput').value = '';
         document.getElementById('directoryModal').classList.add('active');
     }
     function closeModal() { document.getElementById('directoryModal').classList.remove('active'); }
 
-    function saveModalItem() {
+    async function saveModalItem() {
         const val = document.getElementById('modalInput').value.trim();
         if(val) {
             if(currentModalTarget === 'category' && !state.categories.includes(val)) state.categories.push(val);
             if(currentModalTarget === 'client' && !state.clients.includes(val)) state.clients.push(val);
+            if(currentModalTarget === 'jobType' && !state.jobTypes.includes(val)) state.jobTypes.push(val);
+            
+            if(currentModalTarget === 'staff') {
+                // Створення нової працівниці через надсилання першого нульового нарахування на Диск
+                closeModal();
+                showToast("Реєстрація працівниці...");
+                const dateStr = new Date().toISOString().split('T')[0];
+                const row = [Date.now().toString(), dateStr, state.currentBusiness, val, 'нарахування', 'Реєстрація у системі', 0];
+                await appendRowToSheet("Salaries_Database", row);
+                await syncWithGoogleSheets();
+                return;
+            }
+            
             saveConfig(); populateDropdowns(); closeModal(); showToast("Оновлено!");
         }
     }

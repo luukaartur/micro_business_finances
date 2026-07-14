@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Micro Accounting Dashboard v5</title>
+    
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bahama-yellow: #E19E11; 
+            --dark-graphite: #1C1C1E;  
+            --bg-light: #F4F4F6;       
+            --card-bg: #FFFFFF;
+            --border: #E5E5EA;
+            --gray-text: #8E8E93;
+            --priority-green: #34C759;
+            --priority-yellow: #FFCC00;
+            --priority-coral: #FF453A;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--dark-graphite);
+            min-height: 100vh;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 440px;
+            background-color: var(--card-bg);
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 40px rgba(0,0,0,0.03);
+        }
+
+        @media (min-width: 800px) {
+            body { padding: 40px 24px; }
+            .app-container {
+                max-width: 1040px;
+                min-height: auto;
+                border-radius: 24px;
+                padding: 40px;
+                display: grid;
+                grid-template-columns: 380px 1fr;
+                gap: 60px;
+                align-items: start;
+            }
+            .sidebar-panel {
+                border-right: 1px solid var(--border);
+                padding-right: 40px;
+                display: flex;
+                flex-direction: column;
+                height: auto;
+            }
+            .content-panel { 
+                display: block; 
+                min-height: 500px;
+                width: 100%;
+            }
+            .screen { 
+                display: none !important; 
+                width: 100%; 
+                flex-direction: column; 
+            }
+            #screen-main { display: flex !important; }
+            .content-panel .screen.active { display: flex !important; flex-direction: column; }
+            .back-link { display: none !important; }
+        }
+
+        @media (max-width: 799px) {
+            .screen { display: none; }
+            .screen.active { display: flex; flex-direction: column; flex-grow: 1; }
+            .content-panel { display: contents; }
+        }
+
+        .auth-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .btn-google-login { 
+            background: var(--dark-graphite); 
+            color: white; border: none; padding: 18px 36px; 
+            font-size: 16px; font-weight: 700; border-radius: 16px; 
+            cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .app-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: var(--gray-text); font-weight: 700; margin-bottom: 6px; }
+        .business-selector { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; border: none; background: transparent; color: var(--dark-graphite); cursor: pointer; outline: none; }
+        .btn-settings { background: var(--bg-light); border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .balance-card { padding: 10px 0 20px 0; }
+        .balance-card .balance-label { color: var(--gray-text); font-size: 12px; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+        .balance-card .balance-amount { font-size: 38px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+
+        /* ВІДЖЕТ ЗАВДАНЬ НА ГОЛОВНОМУ ЕКРАНІ */
+        .widget-tasks {
+            background-color: var(--bg-light);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        .widget-tasks-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .widget-tasks-header span {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gray-text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .widget-tasks-header a {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--dark-graphite);
+            text-decoration: none;
+        }
+        .widget-task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .widget-task-item:last-child { margin-bottom: 0; }
+        .task-left { display: flex; align-items: center; gap: 10px; }
+        .task-badge { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .task-text { font-size: 14px; font-weight: 600; color: var(--dark-graphite); }
+        .task-checkbox {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .task-checkbox:hover { border-color: var(--dark-graphite); }
+
+        /* СІТКА ВІДЖЕТІВ (iOS ПЛИТКИ) */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: auto;
+        }
+        .widget-tile {
+            background-color: var(--bg-light);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            aspect-ratio: 1 / 1;
+            cursor: pointer;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            border: none;
+            text-align: left;
+        }
+        .widget-tile:active { transform: scale(0.96); }
+        .widget-tile-icon { font-size: 28px; margin-bottom: 12px; }
+        .widget-tile-title { font-size: 16px; font-weight: 800; color: var(--dark-graphite); line-height: 1.2; }
+        .widget-tile-desc { font-size: 11px; color: var(--gray-text); font-weight: 500; margin-top: 4px; }
+        
+        .back-link { font-size: 16px; font-weight: 600; color: var(--dark-graphite); cursor: pointer; margin-bottom: 24px; display: inline-block; }
+        .screen-title { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 20px; }
+        
+        .huge-amount-container { margin-bottom: 20px; border-bottom: 3px solid var(--dark-graphite); padding-bottom: 4px; }
+        .huge-amount-input { width: 100%; border: none; font-size: 40px; font-weight: 900; outline: none; color: var(--dark-graphite); background: transparent; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--gray-text); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .standard-input, .standard-select { width: 100%; height: 50px; border: 2px solid var(--border); border-radius: 14px; padding: 0 16px; font-size: 16px; color: var(--dark-graphite); outline: none; background-color: var(--bg-light); }
+        .standard-input:focus, .standard-select:focus { border-color: var(--dark-graphite); }
+
+        .select-combo { display: flex; gap: 10px; }
+        .btn-plus-inline { width: 50px; height: 50px; border-radius: 14px; border: 2px solid var(--dark-graphite); background-color: transparent; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .btn-main { width: 100%; height: 56px; border-radius: 16px; font-size: 16px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s ease; text-decoration: none; gap: 8px; }
+        .btn-main:active { transform: scale(0.98); }
+        .btn-yellow { background-color: var(--bahama-yellow); color: white; }
+        .btn-dark { background-color: var(--dark-graphite); color: white; }
+        .btn-outline { background-color: transparent; border: 2px solid var(--dark-graphite); color: var(--dark-graphite); }
+
+        /* СПИСКИ */
+        .staff-list, .products-list, .tasks-full-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; width: 100%; }
+        
+        .staff-item, .product-item { background: var(--bg-light); padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; width: 100%; }
+        .staff-name, .product-name { font-size: 16px; font-weight: 700; }
+        .staff-debt { font-size: 15px; font-weight: 800; color: #D9383A; }
+        .staff-debt.zero { color: var(--gray-text); }
+
+        .product-info-left { display: flex; align-items: center; gap: 12px; }
+        .product-img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--border); flex-shrink: 0; }
+        .product-cost { font-size: 15px; font-weight: 800; color: var(--dark-graphite); }
+
+        /* КОНСТРУКТОР СОБІВАРТОСТІ */
+        .cost-calculator-box { background: var(--bg-light); border-radius: 20px; padding: 16px; margin-bottom: 20px; }
+        .calc-header { font-size: 14px; font-weight: 800; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-text); }
+        .calc-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .calc-row-item { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: center; background: white; padding: 8px; border-radius: 10px; }
+        .calc-row-item span { font-size: 13px; font-weight: 600; }
+        .btn-delete-row { background: none; border: none; font-size: 16px; cursor: pointer; color: var(--priority-coral); }
+        .calc-total-bar { display: flex; justify-content: space-between; font-weight: 800; border-top: 2px dashed var(--border); padding-top: 12px; font-size: 16px; }
+
+        .date-range-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .report-summary { background-color: var(--bg-light); border-radius: 16px; padding: 20px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .summary-block { display: flex; flex-direction: column; }
+        .summary-block.full-width { grid-column: span 2; border-top: 1px solid var(--border); padding-top: 12px; }
+        .summary-num { font-size: 20px; font-weight: 800; margin-top: 4px; }
+        .text-income { color: #248A3D; }
+        .text-expense { color: #D9383A; }
+        .chart-container { position: relative; width: 100%; height: 280px; margin-top: 20px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 100; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: white; border-radius: 20px; padding: 24px; width: 100%; max-width: 360px; }
+        .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; }
+
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 100px); background-color: var(--dark-graphite); color: white; padding: 14px 28px; border-radius: 30px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200; }
+        .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+        @media (min-width: 800px) { .pc-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--gray-text); text-align: center; font-size: 16px; font-weight: 500; } }
+        @media (max-width: 799px) { .pc-placeholder { display: none !important; } }
+    </style>
+</head>
+<body>
+
+<div id="auth-overlay" class="auth-overlay">
+    <button class="btn-google-login" onclick="loginWithGoogle()">Увійти через Google акаунт</button>
+</div>
+
+<div class="app-container" id="app-main-layout" style="display: none;">
+    <div id="appToast" class="toast">Завантаження...</div>
+
+    <div id="screen-main" class="screen sidebar-panel">
+        <div class="app-header">
+            <div>
+                <div class="meta-label">ДАНІ БРЕНДУ</div>
+                <select id="businessSelect" class="business-selector" onchange="changeBusiness()"></select>
+            </div>
+            <button class="btn-settings" onclick="goToScreen('screen-settings')">⚙️</button>
+        </div>
+
+        <div class="balance-card">
+            <div class="balance-label">Загальний Бюджет</div>
+            <div class="balance-amount" id="mainBalance">0 ₴</div>
+        </div>
+
+        <div class="widget-tasks">
+            <div class="widget-tasks-header">
+                <span>Завдання</span>
+                <a href="#" onclick="goToScreen('screen-tasks'); return false;">Усі завдання →</a>
+            </div>
+            <div id="miniTasksContainer">
+                <p style="font-size: 13px; color: var(--gray-text); text-align: center; padding: 6px 0;">Немає активних завдань</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <button class="widget-tile" onclick="openFastFinanceModal()">
+                <div class="widget-tile-icon">🧮</div>
+                <div>
+                    <div class="widget-tile-title">Гроші</div>
+                    <div class="widget-tile-desc">Додати дохід чи витрату</div>
+                </div>
+            </button>
+
+            <button class="widget-tile" onclick="openPaymentsScreen()">
+                <div class="widget-tile-icon">👩‍🎨</div>
+                <div>
+                    <div class="widget-tile-title">Оплати</div>
+                    <div class="widget-tile-desc">Виплати майстриням</div>
+                </div>
+            </button>
+
+            <button class="widget-tile" onclick="openProductsScreen()">
+                <div class="widget-tile-icon">📦</div>
+                <div>
+                    <div class="widget-tile-title">Товари</div>
+                    <div class="widget-tile-desc">Собівартість & Склад</div>
+                </div>
+            </button>
+
+            <button class="widget-tile" onclick="openReportScreen()">
+                <div class="widget-tile-icon">📊</div>
+                <div>
+                    <div class="widget-tile-title">Звітність</div>
+                    <div class="widget-tile-desc">Кругові діаграми</div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <div class="content-panel">
+        
+        <div id="pc-blank" class="pc-placeholder">
+            <span>← Оберіть дію ліворуч на дашборді</span>
+        </div>
+
+        <div id="screen-expense" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
+            <h2 class="screen-title">Додати витрату</h2>
+            <form id="expenseForm" onsubmit="handleSaveExpense(event)">
+                <div class="form-group"><label>Сума витрати (₴)</label><div class="huge-amount-container"><input type="number" id="expPrice" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required></div></div>
+                <div class="form-group"><label>Найменування</label><input type="text" id="expName" class="standard-input" placeholder="Наприклад: Фурнітура" required></div>
+                <div class="form-group"><label>Кількість</label><input type="number" id="expQty" class="standard-input" value="1" inputmode="decimal" step="any" required></div>
+                <div class="form-group"><label>Категорія</label><div class="select-combo"><select id="expCategory" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('category')">+</button></div></div>
+                <button type="submit" class="btn-main btn-dark" style="margin-top: 20px;">Записати витрату</button>
+            </form>
+        </div>
+
+        <div id="screen-income" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
+            <h2 class="screen-title">Додати прибуток</h2>
+            <form id="incomeForm" onsubmit="handleSaveIncome(event)">
+                <div class="form-group"><label>Сума прибутку (₴)</label><div class="huge-amount-container"><input type="number" id="incAmount" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required></div></div>
+                <div class="form-group"><label>За що</label><input type="text" id="incName" class="standard-input" placeholder="Наприклад: Продаж сумочки" required></div>
+                <div class="form-group"><label>Від кого</label><div class="select-combo"><select id="incClient" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('client')">+</button></div></div>
+                <button type="submit" class="btn-main btn-dark" style="margin-top: 20px;">Записати прибуток</button>
+            </form>
+        </div>
+
+        <div id="screen-payments" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
+            <h2 class="screen-title">Оплати майстриням</h2>
+            <div class="staff-list" id="staffListContainer"></div>
+            <button class="btn-main btn-outline" onclick="openModal('staff')">👤 Додати працівни_цю</button>
+            <button class="btn-main btn-dark" style="margin-top: 12px;" onclick="openStaffAnalytics()">📊 Аналіз оплати праці</button>
+        </div>
+
+        <div id="screen-staff-profile" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-payments')">← До списку</span>
+            <h2 class="screen-title" id="profileStaffName">Майстриня</h2>
+            
+            <div class="balance-card" style="padding: 10px 0 30px 0;">
+                <div class="balance-label">Нараховано до виплати</div>
+                <div class="balance-amount" id="profileStaffDebt" style="color: #D9383A;">0 ₴</div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 40px;">
+                <button class="btn-main btn-yellow" onclick="openPayModal()">💰 Оплатити</button>
+            </div>
+
+            <h3 style="margin-bottom: 15px; font-weight: 800;">Додати виконану роботу</h3>
+            <form id="jobForm" onsubmit="handleSaveJob(event)">
+                <div class="form-group"><label>Тип роботи / Послуга</label><div class="select-combo"><select id="jobType" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('jobType')">+</button></div></div>
+                <div class="form-group"><label>Вартість роботи (₴)</label><input type="number" id="jobPrice" class="standard-input" placeholder="0" inputmode="decimal" required></div>
+                <div class="form-group"><label>Кількість</label><input type="number" id="jobQty" class="standard-input" value="1" inputmode="decimal" required></div>
+                <button type="submit" class="btn-main btn-dark">Нарахувати роботу</button>
+            </form>
+        </div>
+
+        <div id="screen-staff-analytics" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-payments')">← Назад</span>
+            <h2 class="screen-title">Аналіз оплати</h2>
+            <div class="chart-container"><canvas id="staffChart"></canvas></div>
+        </div>
+
+        <div id="screen-report" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
+            <h2 class="screen-title">Звітність</h2>
+            <div class="date-range-row">
+                <div class="form-group"><label>З</label><input type="date" id="repFrom" class="standard-input"></div>
+                <div class="form-group"><label>По</label><input type="date" id="repTo" class="standard-input"></div>
+            </div>
+            <button class="btn-main btn-yellow" onclick="generateReport()">Сформувати</button>
+            <div class="report-summary">
+                <div class="summary-block"><span class="meta-label">ДОХОДИ</span><span class="summary-num text-income" id="repTotalIncome">0 ₴</span></div>
+                <div class="summary-block"><span class="meta-label">ВИТРАТИ</span><span class="summary-num text-expense" id="repTotalExpense">0 ₴</span></div>
+                <div class="summary-block full-width"><span class="meta-label">БАЛАНС</span><span class="summary-num" id="repNetBalance">0 ₴</span></div>
+            </div>
+            <div class="chart-container"><canvas id="expenseChart"></canvas></div>
+        </div>
+
+        <div id="screen-settings" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
+            <h2 class="screen-title">Бренди</h2>
+            <div class="form-group">
+                <label>Створити новий мікробізнес</label>
+                <div class="select-combo">
+                    <input type="text" id="newBusinessName" class="standard-input" placeholder="Назва бренду">
+                    <button class="btn-plus-inline" onclick="handleCreateBusiness()">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-products" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
+            <h2 class="screen-title">Товари</h2>
+            <div class="products-list" id="productsListContainer"></div>
+            <button class="btn-main btn-dark" onclick="openAddProductScreen()">➕ Додати виріб</button>
+        </div>
+
+        <div id="screen-product-detail" class="screen">
+            <span class="back-link" onclick="openProductsScreen()">← До товарів</span>
+            <h2 class="screen-title" id="prodDetailTitle">Продукт</h2>
+            
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px;">
+                <img id="prodDetailImg" class="product-img" style="width: 80px; height: 80px;" src="" alt="Товар">
+                <div>
+                    <div class="meta-label">Собівартість</div>
+                    <div class="balance-amount" id="prodDetailCost">0 ₴</div>
+                </div>
+            </div>
+
+            <div class="cost-calculator-box">
+                <div class="calc-header">Склад собівартості</div>
+                <div class="calc-rows" id="calcRowsContainer"></div>
+                <div class="calc-total-bar">
+                    <span>Разом:</span>
+                    <span id="calcTotalSum">0 ₴</span>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom: 12px; font-weight: 800; font-size: 16px;">Додати складову</h3>
+            <form id="calcRowForm" onsubmit="handleAddCalcRow(event)" style="margin-bottom: 30px;">
+                <div class="form-group">
+                    <label>Елемент</label>
+                    <div class="select-combo">
+                        <select id="calcItemName" class="standard-select" required></select>
+                        <button type="button" class="btn-plus-inline" onclick="openModal('material')">+</button>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div class="form-group"><label>Кількість</label><input type="number" id="calcItemQty" class="standard-input" value="1" step="any" required></div>
+                    <div class="form-group"><label>Ціна (₴)</label><input type="number" id="calcItemPrice" class="standard-input" placeholder="0" step="any" required></div>
+                </div>
+                <button type="submit" class="btn-main btn-outline">Додати складову</button>
+            </form>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-main btn-dark" onclick="saveProductCostCalculation()">💾 Зберегти калькуляцію</button>
+                <button class="btn-main btn-outline" style="color: var(--priority-coral); border-color: var(--priority-coral);" onclick="deleteCurrentProduct()">Видалити товар</button>
+            </div>
+        </div>
+
+        <div id="screen-product-add" class="screen">
+            <span class="back-link" onclick="openProductsScreen()">← Скасувати</span>
+            <h2 class="screen-title">Новий товар</h2>
+            <form id="newProductForm" onsubmit="handleCreateProduct(event)">
+                <div class="form-group"><label>Назва товару</label><input type="text" id="newProdName" class="standard-input" placeholder="Сумочка Класик" required></div>
+                <div class="form-group"><label>Посилання на фото</label><input type="text" id="newProdImg" class="standard-input" placeholder="https://site.com/photo.jpg"></div>
+                <button type="submit" class="btn-main btn-dark" style="margin-top: 20px;">Створити виріб</button>
+            </form>
+        </div>
+
+        <div id="screen-tasks" class="screen">
+            <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
+            <h2 class="screen-title">Завдання</h2>
+            
+            <div class="tasks-full-list" id="tasksListContainer"></div>
+
+            <h3 style="margin-bottom: 15px; font-weight: 800; font-size: 16px;">Нове завдання</h3>
+            <form id="newTaskForm" onsubmit="handleCreateTask(event)">
+                <div class="form-group"><label>Опис</label><input type="text" id="taskText" class="standard-input" placeholder="Придбати замки..." required></div>
+                <div class="form-group">
+                    <label>Терміновість</label>
+                    <select id="taskPriority" class="standard-select">
+                        <option value="green">🟢 Звичайна</option>
+                        <option value="yellow">🟡 Середня</option>
+                        <option value="coral">🔴 Терміново</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-main btn-dark" style="margin-top: 10px;">Додати завдання</button>
+            </form>
+
+            <button class="btn-main btn-outline" style="margin-top: 20px;" onclick="toggleTaskArchiveView()" id="btnToggleArchive">Переглянути архів</button>
+            <div class="tasks-full-list" id="archivedTasksListContainer" style="display: none; margin-top: 15px;"></div>
+        </div>
+
+    </div>
+</div>
+
+<div id="directoryModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-title" id="modalTitle">Додати</div>
+        <div class="form-group"><input type="text" id="modalInput" class="standard-input" placeholder="Введіть назву..."></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="btn-main btn-outline" style="height: 46px; font-size: 15px;" onclick="closeModal()">Скасувати</button>
+            <button class="btn-main btn-dark" style="height: 46px; font-size: 15px;" onclick="saveModalItem()">Зберегти</button>
+        </div>
+    </div>
+</div>
+
+<div id="fastFinanceModal" class="modal-overlay">
+    <div class="modal-card" style="text-align: center;">
+        <div class="modal-title" style="margin-bottom: 24px;">Що саме бажаєте додати?</div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn-main btn-yellow" onclick="selectFinanceType('income')">💵 Прибуток</button>
+            <button class="btn-main btn-dark" onclick="selectFinanceType('expense')">➕ Витрату</button>
+            <button class="btn-main btn-outline" style="height: 46px;" onclick="closeFastFinanceModal()">Скасувати</button>
+        </div>
+    </div>
+</div>
+
+<div id="payoutModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-title">Виплата зарплати</div>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <button class="btn-main btn-outline" style="height: 44px; font-size: 14px;" onclick="setPayAmountFull()">Повністю</button>
+        </div>
+        <div class="form-group">
+            <label>Або введіть суму вручну</label>
+            <input type="number" id="payoutCustomAmount" class="standard-input" placeholder="0">
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="btn-main btn-outline" style="height: 46px; font-size: 15px;" onclick="closePayoutModal()">Скасувати</button>
+            <button class="btn-main btn-dark" style="height: 46px; font-size: 15px;" onclick="submitPayout()">ОК</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SPREADSHEET_ID = '1aIEYM9GitfHJ9Eikw9sBTBarSw97ojSYutqqEznRbIc'; 
+    const CLIENT_ID = '630137342173-710gjc52mpk3khcdosbkvmgla7h8sppi.apps.googleusercontent.com'; 
+
+    let googleToken = null;
+    let currentChartInstance = null;
+    let staffChartInstance = null;
+    let currentModalTarget = '';
+    let selectedStaffName = ''; 
+    let selectedProductId = '';
+    let currentCalculatorRows = [];
+    let showArchivedTasks = false;
+
+    let state = JSON.parse(localStorage.getItem('micro_accounting_v5')) || {
+        currentBusiness: "Якзаманеться",
+        businesses: ["Якзаманеться"],
+        categories: ["Матеріали", "Фурнітура", "Логістика", "Пакування", "Оплата робіт"],
+        clients: ["Роздріб", "Instagram", "Власний сайт"],
+        jobTypes: ["Пошиття", "Збірка", "Крій", "Дизайн"],
+        materials: ["Шкіра Crazy Horse", "Нитки вощені", "Замок 5мм", "Коробка крафтова"]
+    };
+
+    let transactionsDatabase = [];
+    let staffLogDatabase = []; 
+    let productsDatabase = [];
+    let tasksDatabase = [];
+
+    function saveConfig() { localStorage.setItem('micro_accounting_v5', JSON.stringify(state)); }
+    function showToast(text) { const toast = document.getElementById('appToast'); toast.innerText = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2000); }
+
+    let tokenClient;
+    
+    async function ensureValidToken() {
+        const expireTime = localStorage.getItem('g_token_expires');
+        if (!googleToken || !expireTime || Date.now() > parseInt(expireTime) - 60000) { 
+            showToast("Оновлення сесії...");
+            return new Promise((resolve) => {
+                if (typeof tokenClient === 'undefined' || !tokenClient) {
+                    initGoogleClient();
+                }
+                tokenClient.callback = (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        googleToken = tokenResponse.access_token;
+                        const newExpire = Date.now() + (tokenResponse.expires_in * 1000);
+                        localStorage.setItem('g_token', googleToken);
+                        localStorage.setItem('g_token_expires', newExpire);
+                        resolve(true);
+                    }
+                };
+                tokenClient.requestAccessToken({ prompt: 'none' }); 
+            });
+        }
+        return true;
+    }
+
+    function initGoogleClient() {
+        if (typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) {
+            return;
+        }
+        
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/spreadsheets',
+            callback: (tokenResponse) => {
+                if (tokenResponse && tokenResponse.access_token) {
+                    googleToken = tokenResponse.access_token;
+                    const expireTime = Date.now() + (tokenResponse.expires_in * 1000);
+                    localStorage.setItem('g_token', googleToken);
+                    localStorage.setItem('g_token_expires', expireTime);
+                    initAppAfterLogin();
+                }
+            },
+        });
+
+        const savedToken = localStorage.getItem('g_token');
+        const expireTime = localStorage.getItem('g_token_expires');
+        if (savedToken && expireTime && Date.now() < parseInt(expireTime)) {
+            googleToken = savedToken;
+            initAppAfterLogin();
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', initGoogleClient);
+    window.addEventListener('load', initGoogleClient);
+
+    function loginWithGoogle() { 
+        if (typeof tokenClient === 'undefined' || !tokenClient) {
+            showToast("Завантаження сервісів Google... Спробуйте ще раз");
+            initGoogleClient();
+            return;
+        }
+        tokenClient.requestAccessToken({ prompt: 'consent' }); 
+    }
+
+    function initAppAfterLogin() {
+        document.getElementById('auth-overlay').style.display = 'none';
+        document.getElementById('app-main-layout').style.display = 'flex';
+        
+        if(window.innerWidth >= 800) {
+            document.getElementById('screen-main').style.display = 'flex';
+        } else {
+            document.getElementById('screen-main').classList.add('active');
+        }
+
+        renderBusinessSelector();
+        populateDropdowns();
+        
+        const now = new Date();
+        document.getElementById('repFrom').value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        document.getElementById('repTo').value = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        syncWithGoogleSheets();
+    }
+
+    async function syncWithGoogleSheets() {
+        await ensureValidToken();
+        showToast("Синхронізація з Диском...");
+        const currentYear = new Date().getFullYear().toString();
+
+        try {
+            let metadataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`, {
+                headers: { 'Authorization': `Bearer ${googleToken}` }
+            });
+            let metadata = await metadataResp.json();
+            
+            if(!metadata.sheets.some(s => s.properties.title === currentYear)) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: currentYear } } }] })
+                });
+                await appendRowToSheet(currentYear, ["ID", "Дата", "Бренд", "Тип", "Назва", "Ціна", "Кількість", "Разом", "Категорія/Клієнт"]);
+            }
+
+            if(!metadata.sheets.some(s => s.properties.title === "Salaries_Database")) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: "Salaries_Database" } } }] })
+                });
+                await appendRowToSheet("Salaries_Database", ["ID", "Дата", "Бренд", "Працівниця", "Тип Операції", "Деталі роботи", "Сума"]);
+            }
+
+            // Нова таблиця Товарів
+            if(!metadata.sheets.some(s => s.properties.title === "Products_Database")) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: "Products_Database" } } }] })
+                });
+                await appendRowToSheet("Products_Database", ["ID", "Дата", "Бренд", "Назва товару", "Собівартість", "Посилання на фото", "JSON_Складові"]);
+            }
+
+            // Нова таблиця Завдань
+            if(!metadata.sheets.some(s => s.properties.title === "Tasks_Database")) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ requests: [{ addSheet: { properties: { title: "Tasks_Database" } } }] })
+                });
+                await appendRowToSheet("Tasks_Database", ["ID", "Дата", "Бренд", "Текст завдання", "Пріоритет", "Статус"]);
+            }
+
+            // Завантаження фінансів
+            let dataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${currentYear}!A2:I10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let dataRows = await dataResp.json();
+            transactionsDatabase = [];
+            if (dataRows.values) {
+                dataRows.values.forEach(row => {
+                    transactionsDatabase.push({
+                        date: row[1], business: row[2], type: row[3], name: row[4],
+                        price: parseFloat(row[5]) || 0, qty: parseFloat(row[6]) || 1,
+                        total: parseFloat(row[7]) || 0, categoryOrClient: row[8]
+                    });
+                });
+            }
+
+            // Завантаження майстринь
+            let staffResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Salaries_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let staffRows = await staffResp.json();
+            staffLogDatabase = [];
+            if(staffRows.values) {
+                staffRows.values.forEach(row => {
+                    staffLogDatabase.push({
+                        business: row[2], name: row[3], type: row[4], jobTitle: row[5], amount: parseFloat(row[6]) || 0
+                    });
+                });
+            }
+
+            // Завантаження товарів
+            let prodResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let prodRows = await prodResp.json();
+            productsDatabase = [];
+            if(prodRows.values) {
+                prodRows.values.forEach(row => {
+                    productsDatabase.push({
+                        id: row[0], date: row[1], business: row[2], name: row[3], cost: parseFloat(row[4]) || 0, imgUrl: row[5] || '', composition: row[6] ? JSON.parse(row[6]) : []
+                    });
+                });
+            }
+
+            // Завантаження завдань
+            let taskResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let taskRows = await taskResp.json();
+            tasksDatabase = [];
+            if(taskRows.values) {
+                taskRows.values.forEach(row => {
+                    tasksDatabase.push({
+                        id: row[0], date: row[1], business: row[2], text: row[3], priority: row[4], status: row[5]
+                    });
+                });
+            }
+
+            calculateMainBalance();
+            renderMiniTasks();
+            renderTasksList();
+            renderStaffList();
+            renderProductsList();
+            showToast("Дані оновлено!");
+        } catch (err) { console.error(err); showToast("Помилка зв'язку."); }
+    }
+
+    async function appendRowToSheet(sheetName, rowData) {
+        await ensureValidToken();
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!A:A:append?valueInputOption=USER_ENTERED`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: [rowData] })
+        });
+    }
+
+    function goToScreen(screenId) {
+        const isDesktop = window.innerWidth >= 800;
+        if (isDesktop) {
+            document.getElementById('pc-blank').style.display = 'none';
+            document.querySelectorAll('.content-panel .screen').forEach(s => s.classList.remove('active'));
+            const target = document.querySelector(`.content-panel #${screenId}`);
+            if(target) target.classList.add('active');
+        } else {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        if(screenId === 'screen-main') {
+            if(isDesktop) document.getElementById('pc-blank').style.display = 'flex';
+            calculateMainBalance();
+        }
+    }
+
+    function calculateMainBalance() {
+        let balance = 0;
+        transactionsDatabase.forEach(t => {
+            if(t.business === state.currentBusiness) {
+                if(t.type === 'прибуток') balance += t.total;
+                if(t.type === 'витрата') balance -= t.total;
+            }
+        });
+        document.getElementById('mainBalance').innerText = `${balance.toLocaleString('uk-UA')} ₴`;
+    }
+
+    /* ФУНКЦІОНАЛ: ЗАВДАННЯ (TASKS) */
+    function renderMiniTasks() {
+        const container = document.getElementById('miniTasksContainer');
+        container.innerHTML = '';
+        
+        const activeTasks = tasksDatabase.filter(t => t.business === state.currentBusiness && t.status === 'active');
+        const sorted = activeTasks.slice(-2).reverse();
+
+        if (sorted.length === 0) {
+            container.innerHTML = '<p style="font-size: 13px; color: var(--gray-text); text-align: center; padding: 6px 0;">Немає активних завдань</p>';
+            return;
+        }
+
+        sorted.forEach(t => {
+            const item = document.createElement('div');
+            item.className = 'widget-task-item';
+            item.innerHTML = `
+                <div class="task-left">
+                    <div class="task-badge" style="background-color: var(--priority-${t.priority});"></div>
+                    <span class="task-text">${t.text}</span>
+                </div>
+                <div class="task-checkbox" onclick="archiveTask('${t.id}')"></div>
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    function renderTasksList() {
+        const container = document.getElementById('tasksListContainer');
+        const archContainer = document.getElementById('archivedTasksListContainer');
+        container.innerHTML = '';
+        archContainer.innerHTML = '';
+
+        const active = tasksDatabase.filter(t => t.business === state.currentBusiness && t.status === 'active');
+        const archived = tasksDatabase.filter(t => t.business === state.currentBusiness && t.status === 'archived');
+
+        if(active.length === 0) {
+            container.innerHTML = '<p style="color: var(--gray-text); text-align:center; padding: 20px 0;">Немає активних завдань</p>';
+        } else {
+            active.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'widget-task-item';
+                item.innerHTML = `
+                    <div class="task-left">
+                        <div class="task-badge" style="background-color: var(--priority-${t.priority});"></div>
+                        <span class="task-text">${t.text}</span>
+                    </div>
+                    <div class="task-checkbox" onclick="archiveTask('${t.id}')"></div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        if(archived.length === 0) {
+            archContainer.innerHTML = '<p style="color: var(--gray-text); text-align:center; padding: 20px 0;">Архів порожній</p>';
+        } else {
+            archived.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'widget-task-item';
+                item.style.opacity = '0.6';
+                item.innerHTML = `
+                    <div class="task-left">
+                        <span class="task-text" style="text-decoration: line-through;">${t.text}</span>
+                    </div>
+                    <span style="font-size: 11px; color: var(--gray-text);">Виконано</span>
+                `;
+                archContainer.appendChild(item);
+            });
+        }
+    }
+
+    async function handleCreateTask(e) {
+        e.preventDefault();
+        showToast("Створення завдання...");
+        const text = document.getElementById('taskText').value.trim();
+        const priority = document.getElementById('taskPriority').value;
+        const dateStr = new Date().toISOString().split('T')[0];
+        const id = Date.now().toString();
+
+        const row = [id, dateStr, state.currentBusiness, text, priority, 'active'];
+        try {
+            await appendRowToSheet("Tasks_Database", row);
+            document.getElementById('newTaskForm').reset();
+            await syncWithGoogleSheets();
+        } catch(e) { showToast("Помилка запису."); }
+    }
+
+    async function archiveTask(id) {
+        showToast("Завершення...");
+        await ensureValidToken();
+        
+        try {
+            let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let getRows = await getResp.json();
+            let rowIndex = -1;
+            
+            if(getRows.values) {
+                rowIndex = getRows.values.findIndex(r => r[0] === id) + 2; 
+            }
+
+            if(rowIndex !== -1) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!F${rowIndex}?valueInputOption=USER_ENTERED`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ values: [['archived']] })
+                });
+                await syncWithGoogleSheets();
+            }
+        } catch(e) { showToast("Не вдалося оновити статус."); }
+    }
+
+    function toggleTaskArchiveView() {
+        showArchivedTasks = !showArchivedTasks;
+        const container = document.getElementById('archivedTasksListContainer');
+        const btn = document.getElementById('btnToggleArchive');
+        if(showArchivedTasks) {
+            container.style.display = 'flex';
+            btn.innerText = 'Приховати архів';
+        } else {
+            container.style.display = 'none';
+            btn.innerText = 'Переглянути архів';
+        }
+    }
+
+    /* ФУНКЦІОНАЛ: ТОВАРИ ТА СОБІВАРТІСТЬ (PRODUCTS) */
+    function openProductsScreen() { goToScreen('screen-products'); renderProductsList(); }
+
+    function renderProductsList() {
+        const container = document.getElementById('productsListContainer');
+        container.innerHTML = '';
+        const currentProducts = productsDatabase.filter(p => p.business === state.currentBusiness);
+
+        if(currentProducts.length === 0) {
+            container.innerHTML = '<p style="color: var(--gray-text); text-align:center; padding: 20px 0;">Продуктів ще не створено</p>';
+            return;
+        }
+
+        currentProducts.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'product-item';
+            div.onclick = () => openProductProfile(p.id);
+            div.innerHTML = `
+                <div class="product-info-left">
+                    <img class="product-img" src="${p.imgUrl || 'https://placehold.co/100?text=📦'}" onerror="this.src='https://placehold.co/100?text=📦'">
+                    <span class="product-name">${p.name}</span>
+                </div>
+                <span class="product-cost">${p.cost.toLocaleString('uk-UA')} ₴</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function openAddProductScreen() {
+        document.getElementById('newProductForm').reset();
+        goToScreen('screen-product-add');
+    }
+
+    async function handleCreateProduct(e) {
+        e.preventDefault();
+        showToast("Створення товару...");
+        const name = document.getElementById('newProdName').value.trim();
+        const img = document.getElementById('newProdImg').value.trim();
+        const dateStr = new Date().toISOString().split('T')[0];
+        const id = Date.now().toString();
+
+        const row = [id, dateStr, state.currentBusiness, name, 0, img, JSON.stringify([])];
+        try {
+            await appendRowToSheet("Products_Database", row);
+            goToScreen('screen-products');
+            await syncWithGoogleSheets();
+        } catch(e) { showToast("Помилка запису."); }
+    }
+
+    function openProductProfile(id) {
+        selectedProductId = id;
+        const prod = productsDatabase.find(p => p.id === id);
+        if(!prod) return;
+
+        document.getElementById('prodDetailTitle').innerText = prod.name;
+        document.getElementById('prodDetailImg').src = prod.imgUrl || 'https://placehold.co/100?text=📦';
+        document.getElementById('prodDetailCost').innerText = `${prod.cost.toLocaleString('uk-UA')} ₴`;
+
+        currentCalculatorRows = prod.composition || [];
+        renderCalculatorRows();
+        document.getElementById('calcRowForm').reset();
+        goToScreen('screen-product-detail');
+    }
+
+    function renderCalculatorRows() {
+        const container = document.getElementById('calcRowsContainer');
+        container.innerHTML = '';
+        let total = 0;
+
+        if (currentCalculatorRows.length === 0) {
+            container.innerHTML = '<p style="font-size: 12px; color: var(--gray-text); text-align: center; padding: 10px 0;">Тут поки порожньо. Додайте складові нижче.</p>';
+            document.getElementById('calcTotalSum').innerText = '0 ₴';
+            return;
+        }
+
+        currentCalculatorRows.forEach((row, idx) => {
+            const sum = row.qty * row.price;
+            total += sum;
+
+            const item = document.createElement('div');
+            item.className = 'calc-row-item';
+            item.innerHTML = `
+                <span style="font-weight: 700;">${row.name}</span>
+                <span style="color: var(--gray-text); text-align: right;">${row.qty} шт</span>
+                <span style="text-align: right; font-weight: 700;">${row.price} ₴</span>
+                <button class="btn-delete-row" onclick="deleteCalcRow(${idx})">×</button>
+            `;
+            container.appendChild(item);
+        });
+
+        document.getElementById('calcTotalSum').innerText = `${total.toLocaleString('uk-UA')} ₴`;
+    }
+
+    function handleAddCalcRow(e) {
+        e.preventDefault();
+        const name = document.getElementById('calcItemName').value;
+        const qty = parseFloat(document.getElementById('calcItemQty').value);
+        const price = parseFloat(document.getElementById('calcItemPrice').value);
+
+        currentCalculatorRows.push({ name, qty, price });
+        renderCalculatorRows();
+        
+        document.getElementById('calcItemQty').value = "1";
+        document.getElementById('calcItemPrice').value = "";
+    }
+
+    function deleteCalcRow(idx) {
+        currentCalculatorRows.splice(idx, 1);
+        renderCalculatorRows();
+    }
+
+    async function saveProductCostCalculation() {
+        showToast("Збереження собівартості...");
+        await ensureValidToken();
+
+        let total = 0;
+        currentCalculatorRows.forEach(r => total += (r.qty * r.price));
+
+        try {
+            let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let getRows = await getResp.json();
+            let rowIndex = -1;
+            
+            if(getRows.values) {
+                rowIndex = getRows.values.findIndex(r => r[0] === selectedProductId) + 2; 
+            }
+
+            if(rowIndex !== -1) {
+                const updatedFields = [
+                    [total, JSON.stringify(currentCalculatorRows)]
+                ];
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!E${rowIndex}:F${rowIndex}?valueInputOption=USER_ENTERED`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ values: updatedFields })
+                });
+                await syncWithGoogleSheets();
+                openProductProfile(selectedProductId);
+            }
+        } catch(e) { showToast("Не вдалося оновити базу товарів."); }
+    }
+
+    async function deleteCurrentProduct() {
+        if(!confirm("Ви впевнені, що хочете видалити цей товар?")) return;
+        showToast("Видалення...");
+        await ensureValidToken();
+
+        try {
+            let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let getRows = await getResp.json();
+            let rowIndex = -1;
+            
+            if(getRows.values) {
+                rowIndex = getRows.values.findIndex(r => r[0] === selectedProductId) + 2; 
+            }
+
+            if(rowIndex !== -1) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        requests: [{
+                            deleteRange: {
+                                range: { sheetId: getSheetIdByName(getRows, "Products_Database"), startRowIndex: rowIndex - 1, endRowIndex: rowIndex },
+                                shiftDimension: "ROWS"
+                            }
+                        }]
+                    })
+                });
+                openProductsScreen();
+                await syncWithGoogleSheets();
+            }
+        } catch(e) { 
+            showToast("Видалення локально завершене."); 
+            productsDatabase = productsDatabase.filter(p => p.id !== selectedProductId);
+            openProductsScreen();
+        }
+    }
+
+    function getSheetIdByName(meta, name) {
+        return 0; // Спрощений повернення дефолтного
+    }
+
+    /* ФУНКЦІОНАЛ: ОБ'ЄДНАНА ФІНАНСОВА МОДАЛКА */
+    function openFastFinanceModal() { document.getElementById('fastFinanceModal').classList.add('active'); }
+    function closeFastFinanceModal() { document.getElementById('fastFinanceModal').classList.remove('active'); }
+    function selectFinanceType(type) {
+        closeFastFinanceModal();
+        if(type === 'income') {
+            goToScreen('screen-income');
+        } else {
+            goToScreen('screen-expense');
+        }
+    }
+
+    /* ФУНКЦІОНАЛ: МАЙСТРИНІ */
+    function openPaymentsScreen() { goToScreen('screen-payments'); renderStaffList(); }
+
+    function getStaffDebtsMap() {
+        let debts = {};
+        staffLogDatabase.forEach(item => {
+            if(item.business === state.currentBusiness) {
+                if(!debts[item.name]) debts[item.name] = 0;
+                if(item.type === 'нарахування') debts[item.name] += item.amount;
+                if(item.type === 'виплата') debts[item.name] -= item.amount;
+            }
+        });
+        return debts;
+    }
+
+    function renderStaffList() {
+        const container = document.getElementById('staffListContainer');
+        container.innerHTML = '';
+        const debts = getStaffDebtsMap();
+        
+        let staffNames = new Set();
+        staffLogDatabase.forEach(i => { if(i.business === state.currentBusiness) staffNames.add(i.name); });
+
+        if(staffNames.size === 0) {
+            container.innerHTML = '<p style="color: var(--gray-text); text-align:center; padding: 20px 0;">Працівниць поки немає</p>';
+            return;
+        }
+
+        staffNames.forEach(name => {
+            const debt = debts[name] || 0;
+            const div = document.createElement('div');
+            div.className = 'staff-item';
+            div.onclick = () => openStaffProfile(name);
+            div.innerHTML = `
+                <span class="staff-name">${name}</span>
+                <span class="staff-debt ${debt === 0 ? 'zero' : ''}">${debt.toLocaleString('uk-UA')} ₴</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function openStaffProfile(name) {
+        selectedStaffName = name;
+        document.getElementById('profileStaffName').innerText = name;
+        const debts = getStaffDebtsMap();
+        const debt = debts[name] || 0;
+        document.getElementById('profileStaffDebt').innerText = `${debt.toLocaleString('uk-UA')} ₴`;
+        document.getElementById('jobForm').reset();
+        goToScreen('screen-staff-profile');
+    }
+
+    async function handleSaveJob(e) {
+        e.preventDefault();
+        showToast("Запис роботи...");
+        const type = document.getElementById('jobType').value;
+        const price = parseFloat(document.getElementById('jobPrice').value);
+        const qty = parseFloat(document.getElementById('jobQty').value);
+        const total = price * qty;
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        const row = [Date.now().toString(), dateStr, state.currentBusiness, selectedStaffName, 'нарахування', `${type} (x${qty})`, total];
+        try {
+            await appendRowToSheet("Salaries_Database", row);
+            await syncWithGoogleSheets();
+            openStaffProfile(selectedStaffName);
+        } catch(e) { showToast("Помилка запису."); }
+    }
+
+    function openPayModal() {
+        const debts = getStaffDebtsMap();
+        const debt = debts[selectedStaffName] || 0;
+        if(debt <= 0) { alert("У цієї майстрині немає накопиченого боргу до виплати."); return; }
+        document.getElementById('payoutCustomAmount').value = debt;
+        document.getElementById('payoutModal').classList.add('active');
+    }
+    function closePayoutModal() { document.getElementById('payoutModal').classList.remove('active'); }
+    function setPayAmountFull() {
+        const debts = getStaffDebtsMap();
+        document.getElementById('payoutCustomAmount').value = debts[selectedStaffName] || 0;
+    }
+
+    async function submitPayout() {
+        const amount = parseFloat(document.getElementById('payoutCustomAmount').value);
+        if(!amount || amount <= 0) { alert("Введіть коректну суму"); return; }
+        
+        closePayoutModal();
+        showToast("Проведення виплати...");
+        const dateStr = new Date().toISOString().split('T')[0];
+        const currentYear = new Date().getFullYear().toString();
+
+        const rowSalary = [Date.now().toString(), dateStr, state.currentBusiness, selectedStaffName, 'виплата', 'Видача заробітної плати', amount];
+        const rowFinance = [Date.now().toString(), dateStr, state.currentBusiness, 'витрата', `Виплата: ${selectedStaffName}`, amount, 1, amount, 'Оплата робіт'];
+
+        try {
+            await appendRowToSheet("Salaries_Database", rowSalary);
+            await appendRowToSheet(currentYear, rowFinance);
+            await syncWithGoogleSheets();
+            openStaffProfile(selectedStaffName);
+        } catch(e) { showToast("Помилка при проведенні платежу."); }
+    }
+
+    function openStaffAnalytics() {
+        goToScreen('screen-staff-analytics');
+        
+        let staffPayouts = {};
+        staffLogDatabase.forEach(item => {
+            if(item.business === state.currentBusiness && item.type === 'виплата') {
+                staffPayouts[item.name] = (staffPayouts[item.name] || 0) + item.amount;
+            }
+        });
+
+        const ctx = document.getElementById('staffChart').getContext('2d');
+        if(staffChartInstance) staffChartInstance.destroy();
+        
+        const labels = Object.keys(staffPayouts);
+        const values = Object.values(staffPayouts);
+
+        if(labels.length === 0) {
+            ctx.clearRect(0, 0, 400, 400);
+            showToast("Немає даних для діаграми");
+            return;
+        }
+
+        staffChartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#E19E11', '#1C1C1E', '#8E8E93', '#248A3D', '#4478FF', '#FF5252'],
+                    borderWidth: 2, borderColor: '#ffffff'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    /* ВИТРАТИ ТА ДОХОДИ */
+    async function handleSaveExpense(e) {
+        e.preventDefault();
+        showToast("Запис...");
+        const price = parseFloat(document.getElementById('expPrice').value);
+        const qty = parseFloat(document.getElementById('expQty').value);
+        const name = document.getElementById('expName').value.trim();
+        const cat = document.getElementById('expCategory').value;
+        const currentYear = new Date().getFullYear().toString();
+        const dateStr = new Date().toISOString().split('T')[0];
+        const total = price * qty;
+
+        const row = [Date.now().toString(), dateStr, state.currentBusiness, 'витрата', name, price, qty, total, cat];
+        try {
+            await appendRowToSheet(currentYear, row);
+            document.getElementById('expenseForm').reset();
+            document.getElementById('expQty').value = "1";
+            await syncWithGoogleSheets();
+            goToScreen('screen-main');
+        } catch(e) { showToast("Помилка."); }
+    }
+
+    async function handleSaveIncome(e) {
+        e.preventDefault();
+        showToast("Запис...");
+        const amount = parseFloat(document.getElementById('incAmount').value);
+        const name = document.getElementById('incName').value.trim();
+        const client = document.getElementById('incClient').value;
+        const currentYear = new Date().getFullYear().toString();
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        const row = [Date.now().toString(), dateStr, state.currentBusiness, 'прибуток', name, amount, 1, amount, client];
+        try {
+            await appendRowToSheet(currentYear, row);
+            document.getElementById('incomeForm').reset();
+            await syncWithGoogleSheets();
+            goToScreen('screen-main');
+        } catch(e) { showToast("Помилка."); }
+    }
+
+    function openReportScreen() { goToScreen('screen-report'); generateReport(); }
+
+    function generateReport() {
+        const fromDate = document.getElementById('repFrom').value;
+        const toDate = document.getElementById('repTo').value;
+        let totalIncome = 0, totalExpense = 0, categoryData = {};
+
+        transactionsDatabase.forEach(t => {
+            if(t.business === state.currentBusiness && t.date >= fromDate && t.date <= toDate) {
+                if(t.type === 'прибуток') totalIncome += t.total;
+                if(t.type === 'витрата') {
+                    totalExpense += t.total;
+                    categoryData[t.categoryOrClient] = (categoryData[t.categoryOrClient] || 0) + t.total;
+                }
+            }
+        });
+
+        document.getElementById('repTotalIncome').innerText = `${totalIncome.toLocaleString('uk-UA')} ₴`;
+        document.getElementById('repTotalExpense').innerText = `${totalExpense.toLocaleString('uk-UA')} ₴`;
+        const net = totalIncome - totalExpense;
+        document.getElementById('repNetBalance').innerText = `${net.toLocaleString('uk-UA')} ₴`;
+        document.getElementById('repNetBalance').style.color = net >= 0 ? '#248A3D' : '#D9383A';
+
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        if(currentChartInstance) currentChartInstance.destroy();
+        const labels = Object.keys(categoryData); const dataValues = Object.values(categoryData);
+        if(labels.length === 0) return;
+
+        currentChartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: ['#E19E11', '#1C1C1E', '#8E8E93', '#248A3D', '#4478FF', '#FF5252'],
+                    borderWidth: 2, borderColor: '#ffffff'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    /* БРЕНДИ */
+    function renderBusinessSelector() {
+        const select = document.getElementById('businessSelect'); select.innerHTML = '';
+        state.businesses.forEach(b => {
+            const opt = document.createElement('option'); opt.value = b; opt.innerText = b;
+            if(b === state.currentBusiness) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function populateDropdowns() {
+        const expCat = document.getElementById('expCategory'); expCat.innerHTML = '';
+        state.categories.forEach(c => expCat.innerHTML += `<option value="${c}">${c}</option>`);
+        
+        const incCli = document.getElementById('incClient'); incCli.innerHTML = '';
+        state.clients.forEach(c => incCli.innerHTML += `<option value="${c}">${c}</option>`);
+
+        const jobDrop = document.getElementById('jobType'); jobDrop.innerHTML = '';
+        state.jobTypes.forEach(j => jobDrop.innerHTML += `<option value="${j}">${j}</option>`);
+
+        const calcMat = document.getElementById('calcItemName'); calcMat.innerHTML = '';
+        state.materials.forEach(m => calcMat.innerHTML += `<option value="${m}">${m}</option>`);
+    }
+
+    function changeBusiness() {
+        state.currentBusiness = document.getElementById('businessSelect').value; 
+        saveConfig(); 
+        calculateMainBalance();
+        renderMiniTasks();
+        renderTasksList();
+        renderStaffList();
+        renderProductsList();
+        if(window.innerWidth >= 800) {
+            if(document.getElementById('screen-report').classList.contains('active')) generateReport();
+            if(document.getElementById('screen-staff-analytics').classList.contains('active')) openStaffAnalytics();
+        }
+    }
+
+    function handleCreateBusiness() {
+        const input = document.getElementById('newBusinessName'); const name = input.value.trim();
+        if(name && !state.businesses.includes(name)) {
+            state.businesses.push(name); state.currentBusiness = name;
+            saveConfig(); renderBusinessSelector(); input.value = ''; showToast(`Бренд створено!`); goToScreen('screen-main');
+        }
+    }
+
+    /* СПРАВОЧНИКИ */
+    function openModal(type) {
+        currentModalTarget = type;
+        let title = 'Додати';
+        if(type==='category') title='Нова категорія';
+        if(type==='client') title='Новий клієнт';
+        if(type==='jobType') title='Новий тип роботи';
+        if(type==='material') title='Нова складова';
+        if(type==='staff') title='Нова працівниця';
+        
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalInput').value = '';
+        document.getElementById('directoryModal').classList.add('active');
+    }
+    function closeModal() { document.getElementById('directoryModal').classList.remove('active'); }
+
+    async function saveModalItem() {
+        const val = document.getElementById('modalInput').value.trim();
+        if(val) {
+            if(currentModalTarget === 'category' && !state.categories.includes(val)) state.categories.push(val);
+            if(currentModalTarget === 'client' && !state.clients.includes(val)) state.clients.push(val);
+            if(currentModalTarget === 'jobType' && !state.jobTypes.includes(val)) state.jobTypes.push(val);
+            if(currentModalTarget === 'material' && !state.materials.includes(val)) state.materials.push(val);
+            
+            if(currentModalTarget === 'staff') {
+                closeModal();
+                showToast("Реєстрація працівниці...");
+                const dateStr = new Date().toISOString().split('T')[0];
+                const row = [Date.now().toString(), dateStr, state.currentBusiness, val, 'нарахування', 'Реєстрація у системі', 0];
+                await appendRowToSheet("Salaries_Database", row);
+                await syncWithGoogleSheets();
+                return;
+            }
+            
+            saveConfig(); populateDropdowns(); closeModal(); showToast("Оновлено!");
+        }
+    }
+</script>
+</body>
+</html>

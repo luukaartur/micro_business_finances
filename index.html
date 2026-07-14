@@ -216,9 +216,26 @@
         .btn-outline { background-color: transparent; border: 2px solid var(--dark-graphite); color: var(--dark-graphite); }
 
         /* СПИСКИ */
-        .staff-list, .products-list, .tasks-full-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; width: 100%; }
+        .staff-list, .products-list, .tasks-full-list { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            margin-bottom: 24px; 
+            width: 100%; 
+            clear: both;
+        }
         
-        .staff-item, .product-item { background: var(--bg-light); padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; width: 100%; }
+        .staff-item, .product-item { 
+            background: var(--bg-light); 
+            padding: 16px; 
+            border-radius: 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            cursor: pointer; 
+            width: 100%; 
+            min-height: 56px;
+        }
         .staff-name, .product-name { font-size: 16px; font-weight: 700; }
         .staff-debt { font-size: 15px; font-weight: 800; color: #D9383A; }
         .staff-debt.zero { color: var(--gray-text); }
@@ -658,7 +675,7 @@
         syncWithGoogleSheets();
     }
 
-   async function syncWithGoogleSheets() {
+    async function syncWithGoogleSheets() {
         await ensureValidToken();
         showToast("Синхронізація з Диском...");
         const currentYear = new Date().getFullYear().toString();
@@ -707,12 +724,13 @@
                 await appendRowToSheet("Tasks_Database", ["ID", "Дата", "Бренд", "Текст завдання", "Пріоритет", "Статус"]);
             }
 
-            // Завантаження фінансів (починаємо з A2, щоб пропустити заголовок)
+            // Завантаження фінансів
             let dataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${currentYear}!A2:I10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let dataRows = await dataResp.json();
             transactionsDatabase = [];
             if (dataRows.values) {
                 dataRows.values.forEach(row => {
+                    if (row[0] === "ID") return;
                     transactionsDatabase.push({
                         date: row[1], business: row[2], type: row[3], name: row[4],
                         price: parseFloat(row[5]) || 0, qty: parseFloat(row[6]) || 1,
@@ -721,31 +739,34 @@
                 });
             }
 
-            // Завантаження майстринь (починаємо з A2, щоб пропустити заголовок)
+            // Завантаження майстринь
             let staffResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Salaries_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let staffRows = await staffResp.json();
             staffLogDatabase = [];
             if(staffRows.values) {
                 staffRows.values.forEach(row => {
+                    if (row[0] === "ID") return;
                     staffLogDatabase.push({
                         business: row[2], name: row[3], type: row[4], jobTitle: row[5], amount: parseFloat(row[6]) || 0
                     });
                 });
             }
 
-            // Завантаження товарів (починаємо з A2, щоб пропустити заголовок)
+            // Завантаження товарів
             let prodResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let prodRows = await prodResp.json();
             productsDatabase = [];
             if(prodRows.values) {
                 prodRows.values.forEach(row => {
-                    // Перевіряємо, щоб випадково не зчитати заголовок, якщо запит чомусь повернув рядок 1
-                    if (row[0] === "ID") return; 
+                    if (row[0] === "ID" || row[0] === "ID товару") return; 
                     
                     let parsedComp = [];
                     try {
-                        parsedComp = row[6] ? JSON.parse(row[6]) : [];
+                        if (row[6] && row[6].trim().startsWith("[")) {
+                            parsedComp = JSON.parse(row[6]);
+                        }
                     } catch(e) {
+                        console.warn("Помилка обробки JSON складових для продукту ID:", row[0], e);
                         parsedComp = [];
                     }
 
@@ -755,7 +776,7 @@
                 });
             }
 
-            // Завантаження завдань (починаємо з A2, щоб пропустити заголовок)
+            // Завантаження завдань
             let taskResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let taskRows = await taskResp.json();
             tasksDatabase = [];
@@ -1102,7 +1123,7 @@
                     body: JSON.stringify({
                         requests: [{
                             deleteRange: {
-                                range: { sheetId: getSheetIdByName(getRows, "Products_Database"), startRowIndex: rowIndex - 1, endRowIndex: rowIndex },
+                                range: { sheetId: 0, startRowIndex: rowIndex - 1, endRowIndex: rowIndex },
                                 shiftDimension: "ROWS"
                             }
                         }]
@@ -1112,14 +1133,10 @@
                 await syncWithGoogleSheets();
             }
         } catch(e) { 
-            showToast("Видалення локально завершене."); 
+            showToast("Видалення..."); 
             productsDatabase = productsDatabase.filter(p => p.id !== selectedProductId);
             openProductsScreen();
         }
-    }
-
-    function getSheetIdByName(meta, name) {
-        return 0; // Спрощений повернення дефолтного
     }
 
     /* ФУНКЦІОНАЛ: ОБ'ЄДНАНА ФІНАНСОВА МОДАЛКА */

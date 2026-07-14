@@ -658,7 +658,7 @@
         syncWithGoogleSheets();
     }
 
-    async function syncWithGoogleSheets() {
+   async function syncWithGoogleSheets() {
         await ensureValidToken();
         showToast("Синхронізація з Диском...");
         const currentYear = new Date().getFullYear().toString();
@@ -707,7 +707,7 @@
                 await appendRowToSheet("Tasks_Database", ["ID", "Дата", "Бренд", "Текст завдання", "Пріоритет", "Статус"]);
             }
 
-            // Завантаження фінансів
+            // Завантаження фінансів (починаємо з A2, щоб пропустити заголовок)
             let dataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${currentYear}!A2:I10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let dataRows = await dataResp.json();
             transactionsDatabase = [];
@@ -721,7 +721,7 @@
                 });
             }
 
-            // Завантаження майстринь
+            // Завантаження майстринь (починаємо з A2, щоб пропустити заголовок)
             let staffResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Salaries_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let staffRows = await staffResp.json();
             staffLogDatabase = [];
@@ -733,24 +733,35 @@
                 });
             }
 
-            // Завантаження товарів
+            // Завантаження товарів (починаємо з A2, щоб пропустити заголовок)
             let prodResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let prodRows = await prodResp.json();
             productsDatabase = [];
             if(prodRows.values) {
                 prodRows.values.forEach(row => {
+                    // Перевіряємо, щоб випадково не зчитати заголовок, якщо запит чомусь повернув рядок 1
+                    if (row[0] === "ID") return; 
+                    
+                    let parsedComp = [];
+                    try {
+                        parsedComp = row[6] ? JSON.parse(row[6]) : [];
+                    } catch(e) {
+                        parsedComp = [];
+                    }
+
                     productsDatabase.push({
-                        id: row[0], date: row[1], business: row[2], name: row[3], cost: parseFloat(row[4]) || 0, imgUrl: row[5] || '', composition: row[6] ? JSON.parse(row[6]) : []
+                        id: row[0], date: row[1], business: row[2], name: row[3], cost: parseFloat(row[4]) || 0, imgUrl: row[5] || '', composition: parsedComp
                     });
                 });
             }
 
-            // Завантаження завдань
+            // Завантаження завдань (починаємо з A2, щоб пропустити заголовок)
             let taskResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
             let taskRows = await taskResp.json();
             tasksDatabase = [];
             if(taskRows.values) {
                 taskRows.values.forEach(row => {
+                    if (row[0] === "ID") return;
                     tasksDatabase.push({
                         id: row[0], date: row[1], business: row[2], text: row[3], priority: row[4], status: row[5]
                     });

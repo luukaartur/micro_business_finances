@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Micro Accounting Dashboard v5</title>
+    <title>Micro Accounting Dashboard v6</title>
     
     <link rel="apple-touch-icon" href="icon.png">
     <link rel="icon" type="image/png" href="icon.png">
@@ -120,7 +120,7 @@
         .balance-card .balance-label { color: var(--gray-text); font-size: 12px; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
         .balance-card .balance-amount { font-size: 38px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
 
-        /* ВІДЖЕТ ЗАВДАНЬ НА ГОЛОВНОМУ ЕКРАНІ */
+        /* ВІДЖЕТ ЗАВДАНЬ */
         .widget-tasks {
             background-color: var(--bg-light);
             border-radius: 20px;
@@ -169,7 +169,7 @@
         }
         .task-checkbox:hover { border-color: var(--dark-graphite); }
 
-        /* СІТКА ВІДЖЕТІВ (iOS ПЛИТКИ) */
+        /* iOS СІТКА */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -206,8 +206,10 @@
         .standard-input, .standard-select { width: 100%; height: 50px; border: 2px solid var(--border); border-radius: 14px; padding: 0 16px; font-size: 16px; color: var(--dark-graphite); outline: none; background-color: var(--bg-light); }
         .standard-input:focus, .standard-select:focus { border-color: var(--dark-graphite); }
 
-        .select-combo { display: flex; gap: 10px; }
-        .btn-plus-inline { width: 50px; height: 50px; border-radius: 14px; border: 2px solid var(--dark-graphite); background-color: transparent; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        /* Кнопки керування у випадаючих списках (плюс та мінус) */
+        .select-combo { display: flex; gap: 8px; }
+        .btn-action-inline { width: 50px; height: 50px; border-radius: 14px; border: 2px solid var(--dark-graphite); background-color: transparent; font-size: 20px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-minus-inline { border-color: #D9383A; color: #D9383A; }
 
         .btn-main { width: 100%; height: 56px; border-radius: 16px; font-size: 16px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s ease; text-decoration: none; gap: 8px; }
         .btn-main:active { transform: scale(0.98); }
@@ -266,6 +268,11 @@
         .modal-overlay.active { display: flex; }
         .modal-card { background: white; border-radius: 20px; padding: 24px; width: 100%; max-width: 360px; }
         .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; }
+
+        /* Новий дизайн для менеджера видалення */
+        .deletion-list { max-height: 200px; overflow-y: auto; margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .deletion-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--bg-light); border-radius: 10px; font-size: 14px; font-weight: 600; }
+        .btn-delete-item { background: none; border: none; color: var(--priority-coral); font-weight: 700; cursor: pointer; padding: 4px; }
 
         .toast { position: fixed; bottom: 30px; left: 50%; transform: translate(-50%, 100px); background-color: var(--dark-graphite); color: white; padding: 14px 28px; border-radius: 30px; font-size: 14px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 200; }
         .toast.show { transform: translate(-50%, 0); opacity: 1; }
@@ -355,7 +362,14 @@
                 <div class="form-group"><label>Сума витрати (₴)</label><div class="huge-amount-container"><input type="number" id="expPrice" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required></div></div>
                 <div class="form-group"><label>Найменування</label><input type="text" id="expName" class="standard-input" placeholder="Наприклад: Фурнітура" required></div>
                 <div class="form-group"><label>Кількість</label><input type="number" id="expQty" class="standard-input" value="1" inputmode="decimal" step="any" required></div>
-                <div class="form-group"><label>Категорія</label><div class="select-combo"><select id="expCategory" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('category')">+</button></div></div>
+                <div class="form-group">
+                    <label>Категорія</label>
+                    <div class="select-combo">
+                        <select id="expCategory" class="standard-select" required></select>
+                        <button type="button" class="btn-action-inline" onclick="openModal('category')">+</button>
+                        <button type="button" class="btn-action-inline btn-minus-inline" onclick="openDeleteModal('category')">−</button>
+                    </div>
+                </div>
                 <button type="submit" class="btn-main btn-dark" style="margin-top: 20px;">Записати витрату</button>
             </form>
         </div>
@@ -366,7 +380,14 @@
             <form id="incomeForm" onsubmit="handleSaveIncome(event)">
                 <div class="form-group"><label>Сума прибутку (₴)</label><div class="huge-amount-container"><input type="number" id="incAmount" class="huge-amount-input" placeholder="0" inputmode="decimal" step="any" required></div></div>
                 <div class="form-group"><label>За що</label><input type="text" id="incName" class="standard-input" placeholder="Наприклад: Продаж сумочки" required></div>
-                <div class="form-group"><label>Від кого</label><div class="select-combo"><select id="incClient" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('client')">+</button></div></div>
+                <div class="form-group">
+                    <label>Від кого</label>
+                    <div class="select-combo">
+                        <select id="incClient" class="standard-select" required></select>
+                        <button type="button" class="btn-action-inline" onclick="openModal('client')">+</button>
+                        <button type="button" class="btn-action-inline btn-minus-inline" onclick="openDeleteModal('client')">−</button>
+                    </div>
+                </div>
                 <button type="submit" class="btn-main btn-dark" style="margin-top: 20px;">Записати прибуток</button>
             </form>
         </div>
@@ -376,6 +397,7 @@
             <h2 class="screen-title">Оплати майстриням</h2>
             <div class="staff-list" id="staffListContainer"></div>
             <button class="btn-main btn-outline" onclick="openModal('staff')">👤 Додати працівни_цю</button>
+            <button class="btn-main btn-outline btn-minus-inline" style="margin-top: 8px;" onclick="openDeleteModal('staff')">👤 Видалити працівни_цю</button>
             <button class="btn-main btn-dark" style="margin-top: 12px;" onclick="openStaffAnalytics()">📊 Аналіз оплати праці</button>
         </div>
 
@@ -394,7 +416,14 @@
 
             <h3 style="margin-bottom: 15px; font-weight: 800;">Додати виконану роботу</h3>
             <form id="jobForm" onsubmit="handleSaveJob(event)">
-                <div class="form-group"><label>Тип роботи / Послуга</label><div class="select-combo"><select id="jobType" class="standard-select" required></select><button type="button" class="btn-plus-inline" onclick="openModal('jobType')">+</button></div></div>
+                <div class="form-group">
+                    <label>Тип роботи / Послуга</label>
+                    <div class="select-combo">
+                        <select id="jobType" class="standard-select" required></select>
+                        <button type="button" class="btn-action-inline" onclick="openModal('jobType')">+</button>
+                        <button type="button" class="btn-action-inline btn-minus-inline" onclick="openDeleteModal('jobType')">−</button>
+                    </div>
+                </div>
                 <div class="form-group"><label>Вартість роботи (₴)</label><input type="number" id="jobPrice" class="standard-input" placeholder="0" inputmode="decimal" required></div>
                 <div class="form-group"><label>Кількість</label><input type="number" id="jobQty" class="standard-input" value="1" inputmode="decimal" required></div>
                 <button type="submit" class="btn-main btn-dark">Нарахувати роботу</button>
@@ -430,7 +459,14 @@
                 <label>Створити новий мікробізнес</label>
                 <div class="select-combo">
                     <input type="text" id="newBusinessName" class="standard-input" placeholder="Назва бренду">
-                    <button class="btn-plus-inline" onclick="handleCreateBusiness()">+</button>
+                    <button class="btn-action-inline" onclick="handleCreateBusiness()">+</button>
+                </div>
+            </div>
+            <div class="form-group" style="margin-top: 24px;">
+                <label>Видалити діючий бренд</label>
+                <div class="select-combo">
+                    <select id="deleteBusinessSelect" class="standard-select"></select>
+                    <button class="btn-action-inline btn-minus-inline" onclick="handleDeleteBusiness()">−</button>
                 </div>
             </div>
         </div>
@@ -466,17 +502,29 @@
             <h3 style="margin-bottom: 12px; font-weight: 800; font-size: 16px;">Додати складову</h3>
             <form id="calcRowForm" onsubmit="handleAddCalcRow(event)" style="margin-bottom: 30px;">
                 <div class="form-group">
-                    <label>Елемент</label>
+                    <label>Матеріал / Елемент</label>
                     <div class="select-combo">
                         <select id="calcItemName" class="standard-select" required></select>
-                        <button type="button" class="btn-plus-inline" onclick="openModal('material')">+</button>
+                        <button type="button" class="btn-action-inline" onclick="openModal('material')">+</button>
+                        <button type="button" class="btn-action-inline btn-minus-inline" onclick="openDeleteModal('material')">−</button>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label>Одиниця</label>
+                        <div class="select-combo">
+                            <select id="calcItemUnit" class="standard-select" required></select>
+                            <button type="button" class="btn-action-inline" onclick="openModal('unit')">+</button>
+                            <button type="button" class="btn-action-inline btn-minus-inline" onclick="openDeleteModal('unit')">−</button>
+                        </div>
+                    </div>
                     <div class="form-group"><label>Кількість</label><input type="number" id="calcItemQty" class="standard-input" value="1" step="any" required></div>
-                    <div class="form-group"><label>Ціна (₴)</label><input type="number" id="calcItemPrice" class="standard-input" placeholder="0" step="any" required></div>
                 </div>
-                <button type="submit" class="btn-main btn-outline">Додати складову</button>
+                <div class="form-group">
+                    <label>Ціна за 1 одиницю (₴)</label>
+                    <input type="number" id="calcItemPrice" class="standard-input" placeholder="0" step="any" required>
+                </div>
+                <button type="submit" class="btn-main btn-outline">Додати в калькулятор</button>
             </form>
 
             <div style="display: flex; flex-direction: column; gap: 10px;">
@@ -533,6 +581,14 @@
     </div>
 </div>
 
+<div id="deletionModal" class="modal-overlay">
+    <div class="modal-card">
+        <div class="modal-title" id="deletionModalTitle">Керування списком</div>
+        <div class="deletion-list" id="deletionItemsContainer"></div>
+        <button class="btn-main btn-outline" style="height: 46px;" onclick="closeDeletionModal()">Закрити</button>
+    </div>
+</div>
+
 <div id="fastFinanceModal" class="modal-overlay">
     <div class="modal-card" style="text-align: center;">
         <div class="modal-title" style="margin-bottom: 24px;">Що саме бажаєте додати?</div>
@@ -574,13 +630,14 @@
     let currentCalculatorRows = [];
     let showArchivedTasks = false;
 
-    let state = JSON.parse(localStorage.getItem('micro_accounting_v5')) || {
+    let state = JSON.parse(localStorage.getItem('micro_accounting_v6')) || {
         currentBusiness: "Якзаманеться",
         businesses: ["Якзаманеться"],
         categories: ["Матеріали", "Фурнітура", "Логістика", "Пакування", "Оплата робіт"],
         clients: ["Роздріб", "Instagram", "Власний сайт"],
         jobTypes: ["Пошиття", "Збірка", "Крій", "Дизайн"],
-        materials: ["Шкіра Crazy Horse", "Нитки вощені", "Замок 5мм", "Коробка крафтова"]
+        materials: ["Шкіра Crazy Horse", "Нитки вощені", "Замок 5мм", "Коробка крафтова"],
+        units: ["шт", "кг", "м", "см", "г", "мл", "л"]
     };
 
     let transactionsDatabase = [];
@@ -588,15 +645,16 @@
     let productsDatabase = [];
     let tasksDatabase = [];
 
-    function saveConfig() { localStorage.setItem('micro_accounting_v5', JSON.stringify(state)); }
+    function saveConfig() { localStorage.setItem('micro_accounting_v6', JSON.stringify(state)); }
     function showToast(text) { const toast = document.getElementById('appToast'); toast.innerText = text; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2000); }
 
     let tokenClient;
     
+    // Покращена логіка непомітного оновлення токена без викидання з сесії
     async function ensureValidToken() {
         const expireTime = localStorage.getItem('g_token_expires');
         if (!googleToken || !expireTime || Date.now() > parseInt(expireTime) - 60000) { 
-            showToast("Оновлення сесії...");
+            showToast("Перевірка авторизації...");
             return new Promise((resolve) => {
                 if (typeof tokenClient === 'undefined' || !tokenClient) {
                     initGoogleClient();
@@ -608,6 +666,10 @@
                         localStorage.setItem('g_token', googleToken);
                         localStorage.setItem('g_token_expires', newExpire);
                         resolve(true);
+                    } else {
+                        // Якщо тихий запит не спрацював, показуємо кнопку входу
+                        document.getElementById('auth-overlay').style.display = 'flex';
+                        document.getElementById('app-main-layout').style.display = 'none';
                     }
                 };
                 tokenClient.requestAccessToken({ prompt: 'none' }); 
@@ -704,7 +766,6 @@
                 await appendRowToSheet("Salaries_Database", ["ID", "Дата", "Бренд", "Працівниця", "Тип Операції", "Деталі роботи", "Сума"]);
             }
 
-            // Нова таблиця Товарів
             if(!metadata.sheets.some(s => s.properties.title === "Products_Database")) {
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
                     method: 'POST',
@@ -714,7 +775,6 @@
                 await appendRowToSheet("Products_Database", ["ID", "Дата", "Бренд", "Назва товару", "Собівартість", "Посилання на фото", "JSON_Складові"]);
             }
 
-            // Нова таблиця Завдань
             if(!metadata.sheets.some(s => s.properties.title === "Tasks_Database")) {
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
                     method: 'POST',
@@ -836,7 +896,7 @@
         document.getElementById('mainBalance').innerText = `${balance.toLocaleString('uk-UA')} ₴`;
     }
 
-    /* ФУНКЦІОНАЛ: ЗАВДАННЯ (TASKS) */
+    /* ФУНКЦІОНАЛ: ЗАВДАННЯ */
     function renderMiniTasks() {
         const container = document.getElementById('miniTasksContainer');
         container.innerHTML = '';
@@ -960,7 +1020,7 @@
         }
     }
 
-    /* ФУНКЦІОНАЛ: ТОВАРИ ТА СОБІВАРТІСТЬ (PRODUCTS) */
+    /* ФУНКЦІОНАЛ: ТОВАРИ ТА СОБІВАРТІСТЬ */
     function openProductsScreen() { goToScreen('screen-products'); renderProductsList(); }
 
     function renderProductsList() {
@@ -1030,7 +1090,7 @@
         let total = 0;
 
         if (currentCalculatorRows.length === 0) {
-            container.innerHTML = '<p style="font-size: 12px; color: var(--gray-text); text-align: center; padding: 10px 0;">Тут поки порожньо. Додайте складові нижче.</p>';
+            container.innerHTML = '<p style="font-size: 12px; color: var(--gray-text); text-align: center; padding: 10px 0;">Калькуляція порожня</p>';
             document.getElementById('calcTotalSum').innerText = '0 ₴';
             return;
         }
@@ -1043,8 +1103,8 @@
             item.className = 'calc-row-item';
             item.innerHTML = `
                 <span style="font-weight: 700;">${row.name}</span>
-                <span style="color: var(--gray-text); text-align: right;">${row.qty} шт</span>
-                <span style="text-align: right; font-weight: 700;">${row.price} ₴</span>
+                <span style="color: var(--gray-text); text-align: right;">${row.qty} ${row.unit || 'шт'}</span>
+                <span style="text-align: right; font-weight: 700;">${(row.price * row.qty).toLocaleString('uk-UA')} ₴</span>
                 <button class="btn-delete-row" onclick="deleteCalcRow(${idx})">×</button>
             `;
             container.appendChild(item);
@@ -1056,10 +1116,11 @@
     function handleAddCalcRow(e) {
         e.preventDefault();
         const name = document.getElementById('calcItemName').value;
+        const unit = document.getElementById('calcItemUnit').value;
         const qty = parseFloat(document.getElementById('calcItemQty').value);
         const price = parseFloat(document.getElementById('calcItemPrice').value);
 
-        currentCalculatorRows.push({ name, qty, price });
+        currentCalculatorRows.push({ name, unit, qty, price });
         renderCalculatorRows();
         
         document.getElementById('calcItemQty').value = "1";
@@ -1099,7 +1160,7 @@
                 await syncWithGoogleSheets();
                 openProductProfile(selectedProductId);
             }
-        } catch(e) { showToast("Не вдалося оновити базу товарів."); }
+        } catch(e) { showToast("Не вдалося зберегти."); }
     }
 
     async function deleteCurrentProduct() {
@@ -1133,7 +1194,7 @@
                 await syncWithGoogleSheets();
             }
         } catch(e) { 
-            showToast("Видалення..."); 
+            showToast("Видалено локально."); 
             productsDatabase = productsDatabase.filter(p => p.id !== selectedProductId);
             openProductsScreen();
         }
@@ -1151,7 +1212,7 @@
         }
     }
 
-    /* ФУНКЦІОНАЛ: МАЙСТРИНІ */
+    /* ФУНКЦІОНАЛ: ПРАЦІВНИЦІ */
     function openPaymentsScreen() { goToScreen('screen-payments'); renderStaffList(); }
 
     function getStaffDebtsMap() {
@@ -1249,7 +1310,7 @@
             await appendRowToSheet(currentYear, rowFinance);
             await syncWithGoogleSheets();
             openStaffProfile(selectedStaffName);
-        } catch(e) { showToast("Помилка при проведенні платежу."); }
+        } catch(e) { showToast("Помилка платежу."); }
     }
 
     function openStaffAnalytics() {
@@ -1270,7 +1331,7 @@
 
         if(labels.length === 0) {
             ctx.clearRect(0, 0, 400, 400);
-            showToast("Немає даних для діаграми");
+            showToast("Немає даних для аналітики.");
             return;
         }
 
@@ -1373,10 +1434,15 @@
     /* БРЕНДИ */
     function renderBusinessSelector() {
         const select = document.getElementById('businessSelect'); select.innerHTML = '';
+        const selectDel = document.getElementById('deleteBusinessSelect'); selectDel.innerHTML = '';
+        
         state.businesses.forEach(b => {
             const opt = document.createElement('option'); opt.value = b; opt.innerText = b;
             if(b === state.currentBusiness) opt.selected = true;
             select.appendChild(opt);
+
+            const optDel = document.createElement('option'); optDel.value = b; optDel.innerText = b;
+            selectDel.appendChild(optDel);
         });
     }
 
@@ -1392,6 +1458,9 @@
 
         const calcMat = document.getElementById('calcItemName'); calcMat.innerHTML = '';
         state.materials.forEach(m => calcMat.innerHTML += `<option value="${m}">${m}</option>`);
+
+        const calcUnit = document.getElementById('calcItemUnit'); calcUnit.innerHTML = '';
+        state.units.forEach(u => calcUnit.innerHTML += `<option value="${u}">${u}</option>`);
     }
 
     function changeBusiness() {
@@ -1416,7 +1485,93 @@
         }
     }
 
-    /* СПРАВОЧНИКИ */
+    function handleDeleteBusiness() {
+        const selectedForDel = document.getElementById('deleteBusinessSelect').value;
+        if (state.businesses.length <= 1) {
+            alert("Неможливо видалити єдиний бренд!");
+            return;
+        }
+        if (confirm(`Ви дійсно хочете видалити бренд "${selectedForDel}" локально? Справи бренду не будуть стерті з Google-таблиці.`)) {
+            state.businesses = state.businesses.filter(b => b !== selectedForDel);
+            if (state.currentBusiness === selectedForDel) {
+                state.currentBusiness = state.businesses[0];
+            }
+            saveConfig();
+            renderBusinessSelector();
+            changeBusiness();
+            showToast("Бренд видалено!");
+        }
+    }
+
+    /* КЕРУВАННЯ ТА ВИДАЛЕННЯ ЗІ СПИСКІВ (НОВА МОДАЛКА) */
+    function openDeleteModal(type) {
+        currentModalTarget = type;
+        const modalTitle = document.getElementById('deletionModalTitle');
+        const container = document.getElementById('deletionItemsContainer');
+        container.innerHTML = '';
+
+        let items = [];
+        if (type === 'category') { modalTitle.innerText = "Видалення категорій"; items = state.categories; }
+        if (type === 'client') { modalTitle.innerText = "Видалення клієнтів"; items = state.clients; }
+        if (type === 'jobType') { modalTitle.innerText = "Видалення типів робіт"; items = state.jobTypes; }
+        if (type === 'material') { modalTitle.innerText = "Видалення матеріалів"; items = state.materials; }
+        if (type === 'unit') { modalTitle.innerText = "Видалення одиниць виміру"; items = state.units; }
+        if (type === 'staff') {
+            modalTitle.innerText = "Звільнення працівниць";
+            let staffSet = new Set();
+            staffLogDatabase.forEach(i => { if(i.business === state.currentBusiness) staffSet.add(i.name); });
+            items = Array.from(staffSet);
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = `<p style="font-size:13px; color:var(--gray-text); text-align:center;">Список порожній</p>`;
+        } else {
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'deletion-item';
+                div.innerHTML = `
+                    <span>${item}</span>
+                    <button class="btn-delete-item" onclick="handleDeleteItem('${item}')">Видалити</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+        document.getElementById('deletionModal').classList.add('active');
+    }
+
+    function closeDeletionModal() {
+        document.getElementById('deletionModal').classList.remove('active');
+    }
+
+    async function handleDeleteItem(val) {
+        if (!confirm(`Видалити "${val}" зі списку?`)) return;
+
+        if (currentModalTarget === 'category') state.categories = state.categories.filter(x => x !== val);
+        if (currentModalTarget === 'client') state.clients = state.clients.filter(x => x !== val);
+        if (currentModalTarget === 'jobType') state.jobTypes = state.jobTypes.filter(x => x !== val);
+        if (currentModalTarget === 'material') state.materials = state.materials.filter(x => x !== val);
+        if (currentModalTarget === 'unit') state.units = state.units.filter(x => x !== val);
+        
+        if (currentModalTarget === 'staff') {
+            closeDeletionModal();
+            showToast("Видалення працівниці з бази...");
+            const dateStr = new Date().toISOString().split('T')[0];
+            // Щоб стерти працівницю повністю, проводимо фінальний балансуючий запис "видалення" на суму 0
+            const row = [Date.now().toString(), dateStr, state.currentBusiness, val, 'виплата', 'Звільнення / Видалення з бази', 0];
+            try {
+                await appendRowToSheet("Salaries_Database", row);
+                await syncWithGoogleSheets();
+            } catch(e) { showToast("Помилка видалення."); }
+            return;
+        }
+
+        saveConfig();
+        populateDropdowns();
+        openDeleteModal(currentModalTarget); // Оновлюємо список у відкритій модалці
+        showToast("Видалено!");
+    }
+
+    /* СПРАВОЧНИКИ (ДОДАВАННЯ) */
     function openModal(type) {
         currentModalTarget = type;
         let title = 'Додати';
@@ -1424,6 +1579,7 @@
         if(type==='client') title='Новий клієнт';
         if(type==='jobType') title='Новий тип роботи';
         if(type==='material') title='Нова складова';
+        if(type==='unit') title='Нова одиниця виміру';
         if(type==='staff') title='Нова працівниця';
         
         document.getElementById('modalTitle').innerText = title;
@@ -1439,6 +1595,7 @@
             if(currentModalTarget === 'client' && !state.clients.includes(val)) state.clients.push(val);
             if(currentModalTarget === 'jobType' && !state.jobTypes.includes(val)) state.jobTypes.push(val);
             if(currentModalTarget === 'material' && !state.materials.includes(val)) state.materials.push(val);
+            if(currentModalTarget === 'unit' && !state.units.includes(val)) state.units.push(val);
             
             if(currentModalTarget === 'staff') {
                 closeModal();
@@ -1450,7 +1607,7 @@
                 return;
             }
             
-            saveConfig(); populateDropdowns(); closeModal(); showToast("Оновлено!");
+            saveConfig(); populateDropdowns(); closeModal(); showToast("Додано!");
         }
     }
 </script>

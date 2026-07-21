@@ -45,9 +45,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 /* ==========================================
-   2. КЛОНУВАННЯ ТОВАРУ (БЕЗ ПОМИЛКИ 404/URL)
+   2. КЛОНУВАННЯ ТОВАРУ (100% ЧИСТЕ ЛОКАЛЬНЕ)
    ========================================== */
-window.duplicateProduct = async function(index, event) {
+window.duplicateProduct = function(index, event) {
     if (event) {
         event.stopPropagation();
         event.preventDefault();
@@ -60,7 +60,7 @@ window.duplicateProduct = async function(index, event) {
 
     const original = productsDatabase[index];
     
-    // Створюємо копію об'єкта
+    // Створюємо копію товару
     const newProduct = {
         id: 'prod_' + Date.now(),
         name: original.name + ' (копія)',
@@ -69,45 +69,18 @@ window.duplicateProduct = async function(index, event) {
         img: original.img || ''
     };
 
-    // 1. Додаємо в локальну базу даних
+    // Додаємо в локальний масив товарів
     productsDatabase.push(newProduct);
 
-    // 2. Перемальовуємо список товарів у списку
+    // Оновлюємо список товарів на екрані
     if (typeof renderProductsList === 'function') {
         renderProductsList();
     }
-    
-    // 3. Оновлюємо випадаючі списки товарів (якщо є функція)
-    if (typeof populateProductSelects === 'function') {
-        populateProductSelects();
-    }
 
-    if (typeof showToast === 'function') showToast("Товар склоновано!");
-
-    // 4. Безпечне збереження в Google Таблицю без використання фігурних дужок/шаблонів
-    try {
-        if (typeof saveProductToSheet === 'function') {
-            await saveProductToSheet(newProduct);
-        } else if (typeof appendRowToGoogle === 'function') {
-            // Перевіряємо, що SCRIPT_URL існує і не містить помилкових символів { або }
-            const validUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL && !SCRIPT_URL.includes('{'));
-            if (validUrl) {
-                await appendRowToGoogle([
-                    'PRODUCT', 
-                    newProduct.id, 
-                    newProduct.name, 
-                    newProduct.cost, 
-                    JSON.stringify(newProduct.components), 
-                    newProduct.img
-                ]);
-            }
-        }
-    } catch (err) {
-        console.warn("Збереження на сервер пропущено/не вдалося, товар збережено локально:", err);
-    }
+    if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
 };
 
-/* Перехоплення відображення списку товарів для виводу кнопки клонування */
+/* Перехоплення відображення списку товарів для додавання кнопки клонування */
 const originalRenderProductsList = window.renderProductsList;
 window.renderProductsList = function() {
     if (typeof originalRenderProductsList === 'function') {

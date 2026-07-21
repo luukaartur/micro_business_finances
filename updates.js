@@ -1,46 +1,24 @@
 /* ==========================================
-   1. СТВОРЕННЯ ОВЕРЛЕЮ ДЛЯ ЗАКРИТТЯ ПО КЛІКУ
+   1. ЗАКРИТТЯ МОДАЛЬНИХ ВІКОН ПО КЛІКУ ПОЗА НИМИ
    ========================================== */
-let backdrop = document.getElementById('modal-backdrop-overlay');
-if (!backdrop) {
-    backdrop = document.createElement('div');
-    backdrop.id = 'modal-backdrop-overlay';
-    document.body.appendChild(backdrop);
-}
-
-backdrop.addEventListener('click', function() {
-    if (typeof goToScreen === 'function') {
-        goToScreen('screen-main');
+document.addEventListener('click', function(e) {
+    // Шукаємо відкриту модалку або картку
+    const activeModal = document.querySelector('.modal-overlay.active, .modal.active, .modal-backdrop.active');
+    
+    if (activeModal && e.target === activeModal) {
+        activeModal.classList.remove('active');
+        if (typeof goToScreen === 'function') goToScreen('screen-main');
+        return;
     }
-});
 
-/* Перехоплення переходу між екранами */
-if (typeof window.goToScreen === 'function') {
-    const originalGoToScreen = window.goToScreen;
-    window.goToScreen = function(screenId) {
-        originalGoToScreen(screenId);
+    // Додатковий захист: клік по затемненому тлу (сірій зоні навколо модалки)
+    if (e.target.classList.contains('modal-overlay') || 
+        e.target.classList.contains('modal-backdrop') || 
+        e.target.id === 'modal-backdrop-overlay') {
         
-        const bd = document.getElementById('modal-backdrop-overlay');
-        if (bd) {
-            if (screenId !== 'screen-main') {
-                bd.classList.add('active');
-            } else {
-                bd.classList.remove('active');
-            }
-        }
-    };
-}
-
-/* Закриття діалогових модальних вікон при кліку на їх тло */
-document.addEventListener('DOMContentLoaded', function() {
-    const modals = document.querySelectorAll('.modal-overlay');
-    modals.forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) {
-                this.classList.remove('active');
-            }
-        });
-    });
+        document.querySelectorAll('.modal-overlay, .modal, .modal-backdrop').forEach(m => m.classList.remove('active'));
+        if (typeof goToScreen === 'function') goToScreen('screen-main');
+    }
 });
 
 
@@ -59,7 +37,7 @@ window.duplicateProduct = function(index, event) {
     }
 
     const original = productsDatabase[index];
-    const rawComps = original.composition || original.components || original.calcRows || [];
+    const rawComps = original.composition || original.calcRows || original.calc || [];
     
     const newProduct = {
         id: 'prod_' + Date.now(),
@@ -69,8 +47,8 @@ window.duplicateProduct = function(index, event) {
         cost: original.cost || 0,
         imgUrl: original.imgUrl || original.img || '',
         composition: JSON.parse(JSON.stringify(rawComps)),
-        components: JSON.parse(JSON.stringify(rawComps)),
-        calcRows: JSON.parse(JSON.stringify(rawComps))
+        calcRows: JSON.parse(JSON.stringify(rawComps)),
+        calc: JSON.parse(JSON.stringify(rawComps))
     };
 
     productsDatabase.push(newProduct);
@@ -82,84 +60,56 @@ window.duplicateProduct = function(index, event) {
     if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
 };
 
-/* Додавання кнопки Клонувати в список */
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof window.renderProductsList === 'function') {
-        const baseRenderProductsList = window.renderProductsList;
-        
-        window.renderProductsList = function() {
-            baseRenderProductsList();
-
-            const container = document.getElementById('productsListContainer');
-            if (!container) return;
-
-            const items = container.querySelectorAll('.product-item');
-            items.forEach((item, index) => {
-                if (!item.querySelector('.btn-duplicate-prod')) {
-                    let actionsDiv = item.querySelector('.product-item-actions');
-                    if (!actionsDiv) {
-                        actionsDiv = document.createElement('div');
-                        actionsDiv.className = 'product-item-actions';
-                        actionsDiv.style.display = 'flex';
-                        actionsDiv.style.alignItems = 'center';
-                        actionsDiv.style.gap = '8px';
-                        
-                        const costSpan = item.querySelector('.product-cost');
-                        if (costSpan) actionsDiv.appendChild(costSpan);
-                        item.appendChild(actionsDiv);
-                    }
-
-                    const dupBtn = document.createElement('button');
-                    dupBtn.className = 'btn-duplicate-prod';
-                    dupBtn.type = 'button';
-                    dupBtn.style.padding = '4px 8px';
-                    dupBtn.style.borderRadius = '8px';
-                    dupBtn.style.border = '1px solid var(--border, #ccc)';
-                    dupBtn.style.background = '#fff';
-                    dupBtn.style.cursor = 'pointer';
-                    dupBtn.style.fontSize = '12px';
-                    dupBtn.style.fontWeight = '600';
-                    dupBtn.innerText = '📋 Клонувати';
-                    dupBtn.onclick = (e) => duplicateProduct(index, e);
-                    
-                    actionsDiv.appendChild(dupBtn);
-                }
-            });
-        };
-    }
-});
-
 
 /* ==========================================
-   3. ОДИНИЦІ ВИМІРЮВАННЯ ТА КАЛЬКУЛЯЦІЯ
+   3. АВТОПІДСТАНОВКА ОДИНИЦІ ТА ЦІНИ ПРИ ЗМІНІ МАТЕРІАЛУ
    ========================================== */
 document.addEventListener('change', function(e) {
-    if (e.target && e.target.id === 'calcItemName') {
+    // Шукаємо випадаючий список матеріалу
+    if (e.target && e.target.tagName === 'SELECT') {
         const selectedMaterial = e.target.value;
         if (!selectedMaterial) return;
 
+        const parentContainer = e.target.closest('.modal-card, .modal, body');
+        if (!parentContainer) return;
+
+        // Шукаємо поля одиниці та ціни
+        const unitSelect = parentContainer.querySelector('select:not([id*="mat"]):not([name*="mat"])') || 
+                           Array.from(parentContainer.querySelectorAll('select')).find(s => s !== e.target);
+        const priceInput = parentContainer.querySelector('input[placeholder*="Ціна"], input[placeholder*="0"]') || 
+                           Array.from(parentContainer.querySelectorAll('input')).find(i => {
+                               const lab = i.previousElementSibling || i.parentElement;
+                               return lab && lab.innerText.includes('ЦІНА');
+                           });
+
+        // Дістаємо збережені параметри з localStorage або дефолтів
         const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
-        if (savedParams[selectedMaterial]) {
-            const priceInput = document.getElementById('calcItemPrice');
-            const unitSelect = document.getElementById('calcItemUnit');
-            
-            if (priceInput && savedParams[selectedMaterial].price !== undefined) {
-                priceInput.value = savedParams[selectedMaterial].price;
-            }
-            if (unitSelect && savedParams[selectedMaterial].unit) {
-                unitSelect.value = savedParams[selectedMaterial].unit;
+        const matInfo = savedParams[selectedMaterial];
+
+        if (matInfo) {
+            if (unitSelect && matInfo.unit) unitSelect.value = matInfo.unit;
+            if (priceInput && matInfo.price !== undefined) priceInput.value = matInfo.price;
+        } else {
+            // Базові правила для автовизначення, якщо нема у localStorage
+            if (unitSelect) {
+                const lowerName = selectedMaterial.toLowerCase();
+                if (lowerName.includes('тканина') || lowerName.includes('нитки') || lowerName.includes('наповнювач')) {
+                    unitSelect.value = 'кг';
+                } else if (lowerName.includes('стрічка') || lowerName.includes('блискавка')) {
+                    unitSelect.value = 'м';
+                }
             }
         }
     }
 });
 
-/* ==========================================
-   4. ІНТЕГРАЦІЯ З РІДНИМ ЕКРАНОМ ТОВАРУ
-   ========================================== */
 
+/* ==========================================
+   4. ВІДОБРАЖЕННЯ ТА ДОДАВАННЯ СКЛАДНИКІВ
+   ========================================== */
 let activeProductRef = null;
 
-// Перехоплюємо відкриття товару
+// Перехоплюємо відкриття картки товару
 const originalOpenProductProfile = window.openProductProfile;
 window.openProductProfile = function(productId) {
     if (typeof originalOpenProductProfile === 'function') {
@@ -168,96 +118,95 @@ window.openProductProfile = function(productId) {
 
     if (typeof productsDatabase === 'undefined') return;
     
-    // Шукаємо товар за ID
     const prod = productsDatabase.find(p => p.id === productId || p.id == productId);
     if (!prod) return;
 
     activeProductRef = prod;
 
-    // Перевіряємо та ініціалізуємо масив складників у товарі
-    if (!activeProductRef.composition && !activeProductRef.calcRows && !activeProductRef.calc) {
-        activeProductRef.composition = [];
+    // Синхронізуємо масиви
+    if (!activeProductRef.composition) {
+        activeProductRef.composition = activeProductRef.calcRows || activeProductRef.calc || [];
     }
 
-    // Даємо рідному інтерфейсу 50мс на рендер, після чого вставляємо наші складники
+    // Даємо інтерфейсу час сформувати DOM та рендеримо
     setTimeout(() => {
         renderNativeCostComposition();
-    }, 50);
+    }, 100);
 };
 
 function renderNativeCostComposition() {
     if (!activeProductRef) return;
 
-    // Шукаємо блок, де написано "СКЛАД СОБІВАРТОСТІ" або "Калькуляція порожня"
-    const allDivs = Array.from(document.querySelectorAll('div, section'));
-    const container = allDivs.find(el => {
-        const txt = el.innerText || '';
-        return txt.includes('СКЛАД СОБІВАРТОСТІ') && (txt.includes('Калькуляція порожня') || txt.includes('Разом:'));
+    // Шукаємо блок "СКЛАД СОБІВАРТОСТІ"
+    const allElements = Array.from(document.querySelectorAll('div, section'));
+    const container = allElements.find(el => {
+        const txt = (el.innerText || '').toUpperCase();
+        return txt.includes('СКЛАД СОБІВАРТОСТІ') && (txt.includes('КАЛЬКУЛЯЦІЯ ПОРОЖНЯ') || txt.includes('РАЗОМ:'));
     });
 
     if (!container) return;
 
-    // Отримуємо складники товару зі збережених полів
     const comps = activeProductRef.composition || activeProductRef.calcRows || activeProductRef.calc || [];
 
     let rowsHTML = '';
     let totalSum = 0;
 
     if (comps.length === 0) {
-        rowsHTML = '<div style="text-align:center; color:#999; padding:12px; font-size:13px;">Калькуляція порожня</div>';
+        rowsHTML = '<div style="text-align:center; color:#999; padding:15px; font-size:13px;">Калькуляція порожня</div>';
     } else {
         comps.forEach((item, idx) => {
-            const qty = parseFloat(item.qty || item.quantity || item.count) || 1;
+            const qty = parseFloat(item.qty || item.quantity) || 1;
             const price = parseFloat(item.price || item.cost) || 0;
             const sum = qty * price;
             totalSum += sum;
 
             rowsHTML += `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #e5e5e5; font-size: 14px;">
                     <div style="flex: 2;">
-                        <strong style="color: #222;">${item.name || item.title || 'Елемент'}</strong>
-                        <div style="font-size: 11px; color: #888;">${qty} ${item.unit || 'шт'} × ${price} ₴</div>
+                        <div style="font-weight: 600; color: #111;">${item.name || 'Елемент'}</div>
+                        <div style="font-size: 12px; color: #777;">${qty} ${item.unit || 'шт'} × ${price} ₴</div>
                     </div>
-                    <div style="font-weight: 700; color: #111; margin-right: 10px;">${sum.toLocaleString('uk-UA')} ₴</div>
-                    <button type="button" onclick="removeProductComponent(${idx})" style="background: none; border: none; color: #ff3b30; font-size: 16px; cursor: pointer; padding: 2px 6px;">✕</button>
+                    <div style="font-weight: 700; color: #000; margin-right: 12px;">${sum.toLocaleString('uk-UA')} ₴</div>
+                    <button type="button" onclick="removeProductComponent(${idx})" style="background: #ffe5e5; border: none; color: #ff3b30; width: 26px; height: 26px; border-radius: 50%; font-weight: bold; cursor: pointer;">✕</button>
                 </div>
             `;
         });
     }
 
-    // Оновлюємо внутрішню себевартість об'єкта
+    // Оновлюємо собівартість об'єкта
     activeProductRef.cost = totalSum;
 
-    // Перемальовуємо вміст контейнера "СКЛАД СОБІВАРТОСТІ"
+    // Перемальовуємо вміст блоку
     container.innerHTML = `
-        <div style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Склад собівартості</div>
-        <div style="margin-bottom: 10px;">${rowsHTML}</div>
-        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid #ddd; font-weight: 700; font-size: 15px;">
+        <div style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Склад собівартості</div>
+        <div>${rowsHTML}</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 2px solid #f0f0f0; font-weight: 700; font-size: 15px;">
             <span>Разом:</span>
             <span>${totalSum.toLocaleString('uk-UA')} ₴</span>
         </div>
     `;
 
-    // Також оновлюємо велику цифру Собівартості зверху біля фото
-    const costDisplay = document.querySelector('.product-cost, [data-cost]');
-    if (costDisplay) {
-        costDisplay.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
+    // Оновлюємо верхню цифру Собівартості
+    const topCostElem = Array.from(document.querySelectorAll('*')).find(el => {
+        const p = el.parentElement;
+        return p && (p.innerText || '').includes('СОБІВАРТОСТЬ') && el.children.length === 0;
+    });
+    if (topCostElem) {
+        topCostElem.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
     }
 
-    // Синхронізуємо зі списком товарів
     if (typeof renderProductsList === 'function') {
         renderProductsList();
     }
 }
 
-// Видалення складника зі списку
+// Видалення позиції
 window.removeProductComponent = function(index) {
     if (!activeProductRef) return;
 
-    const comps = activeProductRef.composition || activeProductRef.calcRows || activeProductRef.calc || [];
+    const comps = activeProductRef.composition || [];
     comps.splice(index, 1);
 
-    // Записуємо назад
     activeProductRef.composition = comps;
     activeProductRef.calcRows = comps;
     activeProductRef.calc = comps;
@@ -265,46 +214,56 @@ window.removeProductComponent = function(index) {
     renderNativeCostComposition();
 };
 
-// Перехоплення додавання нового складника через вашу форму нижче
+// Перехоплення додавання складової через кнопку "+"
 document.addEventListener('click', function(e) {
     const btn = e.target.closest('button');
-    if (!btn) return;
+    if (!btn || !activeProductRef) return;
 
-    // Перевіряємо, чи це кнопка "+" біля форми "Додати складову"
-    const parentForm = btn.closest('.modal-card, .screen, body');
-    if (!parentForm || !activeProductRef) return;
+    // Перевіряємо, чи це кнопка "+" у формі додавання
+    const isAddBtn = btn.innerText.trim() === '+' || btn.classList.contains('btn-add');
+    if (!isAddBtn) return;
 
-    // Якщо натиснули "+" для додавання елемента
-    if (btn.innerText.trim() === '+' || btn.classList.contains('btn-add-calc')) {
-        setTimeout(() => {
-            // Зчитуємо значення з випадаючого списку та інпутів
-            const selectMat = parentForm.querySelector('select');
-            const qtyInput = parentForm.querySelector('input[type="number"]') || parentForm.querySelector('input');
+    const parent = btn.closest('.modal-card, .modal, body');
+    if (!parent) return;
 
-            if (selectMat && selectMat.value) {
-                const matName = selectMat.value;
-            const qty = parseFloat(qtyInput ? qtyInput.value : 1) || 1;
+    const selectMat = parent.querySelector('select');
+    const inputs = parent.querySelectorAll('input');
 
-            // Дістаємо ціну матеріалу з бази матеріалів/defaults
-            const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
-            const matData = savedParams[matName] || {};
-            const price = parseFloat(matData.price) || 0;
-            const unit = matData.unit || 'шт';
+    if (selectMat && selectMat.value) {
+        const matName = selectMat.value;
+        
+        let qty = 1;
+        let price = 0;
+        let unit = 'шт';
 
-            if (!activeProductRef.composition) activeProductRef.composition = [];
-            
-            activeProductRef.composition.push({
-                name: matName,
-                qty: qty,
-                price: price,
-                unit: unit
-            });
+        // Зчитуємо одиницю виміру
+        const unitSelect = Array.from(parent.querySelectorAll('select')).find(s => s !== selectMat);
+        if (unitSelect) unit = unitSelect.value;
 
-            // Синхронізуємо ключі
-            activeProductRef.calcRows = activeProductRef.composition;
-            activeProductRef.calc = activeProductRef.composition;
+        // Зчитуємо кількість та ціну з інпутів
+        inputs.forEach(inp => {
+            const val = parseFloat(inp.value);
+            const parentTxt = (inp.parentElement ? inp.parentElement.innerText : '').toUpperCase();
 
-            renderNativeCostComposition();
-        }, 100);
+            if (parentTxt.includes('КІЛЬКІСТЬ') || inp.type === 'number') {
+                if (!isNaN(val)) qty = val;
+            } else if (parentTxt.includes('ЦІНА') || parentTxt.includes('1 ОДИНИЦЮ')) {
+                if (!isNaN(val)) price = val;
+            }
+        });
+
+        if (!activeProductRef.composition) activeProductRef.composition = [];
+
+        activeProductRef.composition.push({
+            name: matName,
+            qty: qty,
+            price: price,
+            unit: unit
+        });
+
+        activeProductRef.calcRows = activeProductRef.composition;
+        activeProductRef.calc = activeProductRef.composition;
+
+        renderNativeCostComposition();
     }
 });

@@ -65,7 +65,6 @@ window.duplicateProduct = function(index, event) {
    3. АВТОПІДСТАНОВКА ОДИНИЦІ ТА ЦІНИ ДЛЯ #calcItemName
    ========================================== */
 document.addEventListener('change', function(e) {
-    // Регулюємо вибір матеріалу тільки в полі додавання калькуляції
     if (e.target && e.target.id === 'calcItemName') {
         const selectedMaterial = e.target.value;
         if (!selectedMaterial) return;
@@ -73,7 +72,7 @@ document.addEventListener('change', function(e) {
         const unitSelect = document.getElementById('calcItemUnit');
         const priceInput = document.getElementById('calcItemPrice');
 
-        // 1. Автоперемикання одиниці виміру
+        // Авто-перемикання одиниці
         if (unitSelect) {
             const lowerName = selectedMaterial.toLowerCase();
             if (lowerName.includes('тканина') || lowerName.includes('нитки') || lowerName.includes('секонд') || lowerName.includes('наповнювач')) {
@@ -85,7 +84,7 @@ document.addEventListener('change', function(e) {
             }
         }
 
-        // 2. Підстановка збереженої ціни
+        // Авто-підстановка ціни
         const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
         if (savedParams[selectedMaterial] && priceInput) {
             priceInput.value = savedParams[selectedMaterial].price || 0;
@@ -95,10 +94,11 @@ document.addEventListener('change', function(e) {
 
 
 /* ==========================================
-   4. БЕЗПЕЧНА РОБОТА З РІДНИМИ ID ВЕБ-ДОДАТКУ
+   4. ВІДОБРАЖЕННЯ ТА ДОДАВАННЯ СКЛАДНИКІВ
    ========================================== */
 let activeProductRef = null;
 
+// Перехоплюємо відкриття товару
 const originalOpenProductProfile = window.openProductProfile;
 window.openProductProfile = function(productId) {
     if (typeof originalOpenProductProfile === 'function') {
@@ -115,12 +115,12 @@ window.openProductProfile = function(productId) {
         activeProductRef.composition = activeProductRef.calcRows || activeProductRef.calc || [];
     }
 
-    // Чекаємо відкриття екрану і безпечно заповнюємо лише список
     setTimeout(() => {
         renderProductCalcRows();
-    }, 50);
+    }, 100);
 };
 
+// Функція рендеру списку позицій у калькуляторі
 function renderProductCalcRows() {
     const container = document.getElementById('calcRowsContainer');
     const totalElem = document.getElementById('calcTotalSum');
@@ -131,7 +131,7 @@ function renderProductCalcRows() {
     let totalSum = 0;
 
     if (comps.length === 0) {
-        container.innerHTML = '<div style="color: #8e8e93; font-size: 13px; padding: 10px 0;">Калькуляція порожня</div>';
+        container.innerHTML = '<div style="color: #999; font-size: 13px; text-align: center; padding: 12px 0;">Калькуляція порожня</div>';
     } else {
         let html = '';
         comps.forEach((item, idx) => {
@@ -143,12 +143,12 @@ function renderProductCalcRows() {
             html += `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e0e0e0; font-size: 13px;">
                     <div>
-                        <strong>${item.name || 'Матеріал'}</strong>
-                        <div style="font-size: 11px; color: #666;">${qty} ${item.unit || 'шт'} × ${price} ₴</div>
+                        <strong style="color: #222;">${item.name || 'Матеріал'}</strong>
+                        <div style="font-size: 11px; color: #777;">${qty} ${item.unit || 'шт'} × ${price} ₴</div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-weight: 700;">${sum.toLocaleString('uk-UA')} ₴</span>
-                        <button type="button" onclick="removeCalcItem(${idx})" style="background:none; border:none; color:#ff3b30; font-weight:bold; cursor:pointer;">✕</button>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: 700; color: #111;">${sum.toLocaleString('uk-UA')} ₴</span>
+                        <button type="button" onclick="removeCalcItem(${idx})" style="background: #ffe5e5; border: none; color: #ff3b30; width: 22px; height: 22px; border-radius: 50%; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">✕</button>
                     </div>
                 </div>
             `;
@@ -160,8 +160,49 @@ function renderProductCalcRows() {
         totalElem.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
     }
 
+    // Оновлюємо собівартість
     activeProductRef.cost = totalSum;
+
+    // Оновлюємо верхню цифру Собівартості
+    const topCost = document.querySelector('.product-cost, [data-cost]');
+    if (topCost) topCost.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
 }
+
+// Перехоплюємо натискання кнопки "Додати в калькулятор" (submit форми)
+document.addEventListener('submit', function(e) {
+    if (e.target && e.target.id === 'calcRowForm') {
+        e.preventDefault();
+        
+        if (!activeProductRef) return;
+
+        const nameSelect = document.getElementById('calcItemName');
+        const unitSelect = document.getElementById('calcItemUnit');
+        const qtyInput = document.getElementById('calcItemQty');
+        const priceInput = document.getElementById('calcItemPrice');
+
+        if (!nameSelect || !nameSelect.value) return;
+
+        const newItem = {
+            name: nameSelect.value,
+            unit: unitSelect ? unitSelect.value : 'шт',
+            qty: parseFloat(qtyInput ? qtyInput.value : 1) || 1,
+            price: parseFloat(priceInput ? priceInput.value : 0) || 0
+        };
+
+        if (!activeProductRef.composition) activeProductRef.composition = [];
+        
+        activeProductRef.composition.push(newItem);
+        activeProductRef.calcRows = activeProductRef.composition;
+        activeProductRef.calc = activeProductRef.composition;
+
+        // Очищаємо інпути після додавання
+        if (priceInput) priceInput.value = '';
+        if (qtyInput) qtyInput.value = '1';
+
+        // Перемальовуємо список
+        renderProductCalcRows();
+    }
+});
 
 // Видалення складової зі списку
 window.removeCalcItem = function(index) {
@@ -169,6 +210,7 @@ window.removeCalcItem = function(index) {
     
     activeProductRef.composition.splice(index, 1);
     activeProductRef.calcRows = activeProductRef.composition;
+    activeProductRef.calc = activeProductRef.composition;
     
     renderProductCalcRows();
 };

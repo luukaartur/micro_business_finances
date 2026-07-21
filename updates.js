@@ -59,6 +59,7 @@ window.duplicateProduct = function(index, event) {
     }
 
     const original = productsDatabase[index];
+    const rawComps = original.composition || original.components || original.calcRows || [];
     
     // Створюємо копію товару
     const newProduct = {
@@ -68,15 +69,13 @@ window.duplicateProduct = function(index, event) {
         name: original.name + ' (копія)',
         cost: original.cost || 0,
         imgUrl: original.imgUrl || original.img || '',
-        composition: Array.isArray(original.composition) 
-            ? JSON.parse(JSON.stringify(original.composition)) 
-            : (Array.isArray(original.components) ? JSON.parse(JSON.stringify(original.components)) : [])
+        composition: JSON.parse(JSON.stringify(rawComps)),
+        components: JSON.parse(JSON.stringify(rawComps)),
+        calcRows: JSON.parse(JSON.stringify(rawComps))
     };
 
-    // Додаємо в локальний масив товарів
     productsDatabase.push(newProduct);
 
-    // Оновлюємо список товарів на екрані
     if (typeof renderProductsList === 'function') {
         renderProductsList();
     }
@@ -90,7 +89,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const baseRenderProductsList = window.renderProductsList;
         
         window.renderProductsList = function() {
-            // Викликаємо оригінальний рендер з index.html
             baseRenderProductsList();
 
             const container = document.getElementById('productsListContainer');
@@ -117,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     dupBtn.type = 'button';
                     dupBtn.style.padding = '4px 8px';
                     dupBtn.style.borderRadius = '8px';
-                    dupBtn.style.border = '1px solid var(--border)';
+                    dupBtn.style.border = '1px solid var(--border, #ccc)';
                     dupBtn.style.background = '#fff';
                     dupBtn.style.cursor = 'pointer';
                     dupBtn.style.fontSize = '12px';
@@ -158,7 +156,7 @@ document.addEventListener('change', function(e) {
     }
 });
 
-/* Збереження замовчувань для матеріалів при додаванні рядка */
+/* Збереження матеріалу при відправці форми калькуляції */
 document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'calcRowForm') {
         const nameElem = document.getElementById('calcItemName');
@@ -175,48 +173,47 @@ document.addEventListener('submit', function(e) {
     }
 });
 
+
 /* ==========================================
    4. МОДАЛЬНЕ ВІКНО ПЕРЕГЛЯДУ ТА РЕДАГУВАННЯ ТОВАРУ
    ========================================== */
 
-// Створюємо HTML-структуру модального вікна, якщо її ще немає в DOM
 function injectProductModalHTML() {
     if (document.getElementById('editProductModal')) return;
 
     const modalHTML = `
-    <div id="editProductModal" class="modal-overlay">
-        <div class="modal-card" style="max-width: 500px; width: 90%; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); margin: auto;">
+    <div id="editProductModal" class="modal-overlay" style="z-index: 999999; display: none;">
+        <div class="modal-card" style="max-width: 500px; width: 90%; background: #fff; padding: 24px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); position: relative; margin: auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 id="modalProductName" style="margin: 0; font-size: 18px;">Редагування товару</h3>
-                <button type="button" onclick="closeProductModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-text, #888);">&times;</button>
+                <h3 id="modalProductName" style="margin: 0; font-size: 18px; font-weight: 700;">Редагування товару</h3>
+                <button type="button" onclick="closeProductModal()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: #888;">&times;</button>
             </div>
             
             <div style="margin-bottom: 15px;">
                 <label style="display: block; font-size: 12px; color: #666; margin-bottom: 4px;">Назва товару</label>
-                <input type="text" id="modalProductTitleInput" style="width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;">
+                <input type="text" id="modalProductTitleInput" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px;">
             </div>
 
-            <h4 style="margin: 15px 0 10px 0; font-size: 14px; color: #444;">Складники (компоненти):</h4>
-            <div id="modalComponentsList" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; padding: 8px;">
-                <!-- Складники завантажуються динамічно -->
+            <h4 style="margin: 15px 0 8px 0; font-size: 14px; color: #333;">Складники (компоненти):</h4>
+            <div id="modalComponentsList" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; border-radius: 8px; padding: 8px; background: #fafafa;">
+                <!-- Складники підвантажуються тут -->
             </div>
 
-            <!-- Додавання нового компонента прямо у модалці -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 6px; margin-bottom: 15px; align-items: center;">
-                <input type="text" id="newCompName" placeholder="Назва складника" style="padding: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px;">
-                <input type="number" id="newCompQty" placeholder="К-сть" value="1" step="any" style="padding: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px;">
-                <input type="number" id="newCompPrice" placeholder="Ціна ₴" step="any" style="padding: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px;">
-                <button type="button" onclick="addComponentToEditingProduct()" style="padding: 6px 10px; background: #007aff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">+</button>
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 6px; margin-bottom: 20px; align-items: center;">
+                <input type="text" id="newCompName" placeholder="Назва складника" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px;">
+                <input type="number" id="newCompQty" placeholder="К-сть" value="1" step="any" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px;">
+                <input type="number" id="newCompPrice" placeholder="Ціна ₴" step="any" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px;">
+                <button type="button" onclick="addComponentToEditingProduct()" style="padding: 8px 12px; background: #007aff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">+</button>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #eee;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #eee;">
                 <div>
-                    <span style="font-size: 12px; color: #666;">Собівартість: </span>
-                    <strong id="modalProductTotalCost" style="font-size: 16px; color: #000;">0 ₴</strong>
+                    <span style="font-size: 13px; color: #666;">Собівартість: </span>
+                    <strong id="modalProductTotalCost" style="font-size: 18px; color: #000;">0 ₴</strong>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button type="button" onclick="closeProductModal()" style="padding: 8px 14px; border: 1px solid #ccc; background: #fff; border-radius: 8px; cursor: pointer;">Скасувати</button>
-                    <button type="button" onclick="saveProductChanges()" style="padding: 8px 14px; background: #007aff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Зберегти</button>
+                    <button type="button" onclick="closeProductModal()" style="padding: 10px 16px; border: 1px solid #ccc; background: #fff; border-radius: 8px; cursor: pointer; font-size: 14px;">Скасувати</button>
+                    <button type="button" onclick="saveProductChanges()" style="padding: 10px 16px; background: #007aff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">Зберегти</button>
                 </div>
             </div>
         </div>
@@ -229,20 +226,23 @@ function injectProductModalHTML() {
 document.addEventListener('DOMContentLoaded', injectProductModalHTML);
 setTimeout(injectProductModalHTML, 300);
 
-// Глобальний стан для редагованого товару
 let currentEditingProduct = null;
 let currentEditingComponents = [];
 
-// Відкриття детальної інформації про товар
+// Перехоплюємо відкриття товару
 window.openProductProfile = function(productId) {
     if (typeof productsDatabase === 'undefined') return;
 
     const prod = productsDatabase.find(p => p.id === productId || p.id == productId);
     if (!prod) return;
 
+    // Приховуємо інші стандартні модалки, щоб уникнути накладання
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+
     currentEditingProduct = prod;
-    // Глибоке копіювання компонентів, щоб можна було скасувати зміни
-    const rawComps = prod.composition || prod.components || [];
+    
+    // Універсальний пошук компонентів
+    const rawComps = prod.composition || prod.components || prod.calcRows || prod.items || [];
     currentEditingComponents = JSON.parse(JSON.stringify(rawComps));
 
     document.getElementById('modalProductName').innerText = prod.name;
@@ -251,10 +251,12 @@ window.openProductProfile = function(productId) {
     renderModalComponents();
 
     const modal = document.getElementById('editProductModal');
-    if (modal) modal.classList.add('active');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
 };
 
-// Відображення компонентів усередині модалки
 function renderModalComponents() {
     const container = document.getElementById('modalComponentsList');
     if (!container) return;
@@ -262,22 +264,22 @@ function renderModalComponents() {
     container.innerHTML = '';
     let totalCost = 0;
 
-    if (currentEditingComponents.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#999; font-size:12px; padding:10px;">Складники відсутні</div>';
+    if (!currentEditingComponents || currentEditingComponents.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#999; font-size:13px; padding:12px;">Складники відсутні</div>';
     } else {
         currentEditingComponents.forEach((comp, idx) => {
-            const qty = parseFloat(comp.qty) || 1;
-            const price = parseFloat(comp.price) || 0;
+            const qty = parseFloat(comp.qty || comp.quantity || comp.count) || 1;
+            const price = parseFloat(comp.price || comp.cost) || 0;
             const itemTotal = qty * price;
             totalCost += itemTotal;
 
             const row = document.createElement('div');
-            row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #fafafa; font-size: 13px;';
+            row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; border-bottom: 1px solid #eee; font-size: 13px;';
             row.innerHTML = `
-                <div style="flex: 2; font-weight: 500;">${comp.name}</div>
-                <div style="flex: 1.5; color: #666; font-size: 12px;">${qty} ${comp.unit || 'шт'} × ${price}₴</div>
-                <div style="flex: 1; text-align: right; font-weight: 600;">${itemTotal.toLocaleString('uk-UA')} ₴</div>
-                <button type="button" onclick="removeComponentFromEditingProduct(${idx})" style="background: none; border: none; color: #ff3b30; cursor: pointer; font-size: 14px; margin-left: 8px;">✕</button>
+                <div style="flex: 2; font-weight: 500; color: #333;">${comp.name || comp.title || 'Складова'}</div>
+                <div style="flex: 1.5; color: #666; font-size: 12px; text-align: center;">${qty} ${comp.unit || 'шт'} × ${price}₴</div>
+                <div style="flex: 1; text-align: right; font-weight: 600; color: #111;">${itemTotal.toLocaleString('uk-UA')} ₴</div>
+                <button type="button" onclick="removeComponentFromEditingProduct(${idx})" style="background: none; border: none; color: #ff3b30; cursor: pointer; font-size: 14px; margin-left: 10px; font-weight: bold;">✕</button>
             `;
             container.appendChild(row);
         });
@@ -287,7 +289,6 @@ function renderModalComponents() {
     if (totalElem) totalElem.innerText = totalCost.toLocaleString('uk-UA') + ' ₴';
 }
 
-// Додавання нового компонента в процесі редагування
 window.addComponentToEditingProduct = function() {
     const nameInput = document.getElementById('newCompName');
     const qtyInput = document.getElementById('newCompQty');
@@ -311,21 +312,21 @@ window.addComponentToEditingProduct = function() {
     renderModalComponents();
 };
 
-// Видалення компонента
 window.removeComponentFromEditingProduct = function(index) {
     currentEditingComponents.splice(index, 1);
     renderModalComponents();
 };
 
-// Закриття модального вікна
 window.closeProductModal = function() {
     const modal = document.getElementById('editProductModal');
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
     currentEditingProduct = null;
     currentEditingComponents = [];
 };
 
-// Збереження змін у товарі
 window.saveProductChanges = function() {
     if (!currentEditingProduct) return;
 
@@ -334,15 +335,18 @@ window.saveProductChanges = function() {
         currentEditingProduct.name = newTitle;
     }
 
-    // Розраховуємо нову собівартість
-    const newTotalCost = currentEditingComponents.reduce((sum, c) => sum + ((parseFloat(c.qty) || 1) * (parseFloat(c.price) || 0)), 0);
+    const newTotalCost = currentEditingComponents.reduce((sum, c) => {
+        const q = parseFloat(c.qty || c.quantity) || 1;
+        const p = parseFloat(c.price || c.cost) || 0;
+        return sum + (q * p);
+    }, 0);
 
-    // Оновлюємо дані об'єкта
+    // Записуємо оновлені дані в усі поля об'єкта для повної сумісності
     currentEditingProduct.cost = newTotalCost;
     currentEditingProduct.composition = currentEditingComponents;
     currentEditingProduct.components = currentEditingComponents;
+    currentEditingProduct.calcRows = currentEditingComponents;
 
-    // Перемальовуємо список товарів на головному екрані
     if (typeof renderProductsList === 'function') {
         renderProductsList();
     }

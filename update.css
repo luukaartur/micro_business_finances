@@ -1,0 +1,93 @@
+/* ==========================================
+   ОНОВЛЕННЯ 3: КОМПАКТНІ ПЛИТКИ НА ПК
+   ========================================== */
+@media (min-width: 800px) {
+    /* Робимо сітку плиток гнучкішою (4 в ряд замість 2) */
+    .dashboard-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    /* Зменшуємо розмір плиточок */
+    .widget-tile {
+        aspect-ratio: auto !important;
+        height: 110px !important;
+        padding: 12px 14px !important;
+        border-radius: 16px !important;
+    }
+
+    .widget-tile-icon {
+        font-size: 20px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .widget-tile-title {
+        font-size: 13px !important;
+    }
+
+    .widget-tile-desc {
+        font-size: 10px !important;
+    }
+    
+    /* Зменшуємо віджет завдань на головному */
+    .widget-tasks {
+        padding: 12px !important;
+        margin-bottom: 16px !important;
+    }
+}
+
+/* ==========================================
+   ОНОВЛЕННЯ 4: ВСІ ЕКРАНИ У МОДАЛЬНИХ ВІКНАХ НА ПК
+   ========================================== */
+@media (min-width: 800px) {
+    /* Перетворюємо будь-який активний екран у модальне вікно поверх сторінки */
+    .content-panel .screen.active {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        background: #FFFFFF !important;
+        width: 100% !important;
+        max-width: 520px !important;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
+        padding: 28px !important;
+        border-radius: 24px !important;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.2) !important;
+        z-index: 1000 !important;
+    }
+
+    /* Затемнення фону під час відкриття модального вікна */
+    body.has-open-modal::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(2px);
+        z-index: 999;
+    }
+
+    /* Повертаємо кнопці "Назад" вигляд кнопки закриття (Х) */
+    .content-panel .screen.active .back-link {
+        display: inline-block !important;
+        float: right;
+        font-size: 20px !important;
+        color: var(--gray-text) !important;
+        margin-bottom: 10px !important;
+    }
+}
+
+/* Допоміжні стилі для копіювання товарів та автозаповнення */
+.btn-duplicate-prod {
+    background: #E5E5EA;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-duplicate-prod:hover {
+    background: var(--bahama-yellow);
+    color: #fff;
+}

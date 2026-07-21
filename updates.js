@@ -1,39 +1,61 @@
 /* ==========================================
-   1. БЕЗПЕЧНЕ ЗАКРИТТЯ ПО КЛІКУ ПОЗА МОДАЛКОЮ
+   0. СИНХРОНІЗАЦІЯ БАЗИ ДАНИХ (ЩОБ ТОВАРИ НЕ ЗНИКАЛИ)
    ========================================== */
-document.addEventListener('click', function(e) {
-    // Реагуємо ТІЛЬКИ якщо клікнули ПРЯМО по затемненому оверлею (фона)
-    const isOverlayClick = e.target.classList.contains('modal-overlay') || 
-                           e.target.classList.contains('modal-backdrop') || 
-                           e.target.id === 'modal-backdrop-overlay';
-
-    if (isOverlayClick) {
-        e.preventDefault();
-        
-        // Закриваємо тільки активну модалку
-        const activeModal = e.target;
-        activeModal.classList.remove('active');
-
-        // Зберігаємо зміни при закритті
-        saveDataToLocalStorage();
-
-        const remainingModals = document.querySelectorAll('.modal-overlay.active, .modal.active, .modal-backdrop.active');
-        if (remainingModals.length === 0 && typeof goToScreen === 'function') {
-            goToScreen('screen-main');
+function loadSavedProducts() {
+    try {
+        const saved = localStorage.getItem('productsDatabase_backup');
+        if (saved && typeof productsDatabase !== 'undefined') {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                // Додаємо збержені товари, якщо їх немає в основній базі
+                parsed.forEach(p => {
+                    if (!productsDatabase.some(orig => orig.id === p.id)) {
+                        productsDatabase.push(p);
+                    }
+                });
+            }
         }
+    } catch(e) {
+        console.warn("Помилка завантаження збережених товарів:", e);
     }
+}
+
+function saveDataToLocalStorage() {
+    if (typeof productsDatabase !== 'undefined') {
+        localStorage.setItem('productsDatabase_backup', JSON.stringify(productsDatabase));
+    }
+}
+
+// Завантажуємо збережене при старті
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(loadSavedProducts, 100);
 });
+loadSavedProducts();
 
 
 /* ==========================================
-   ФУНКЦІЯ ПРИМУСОВОГО ЗБЕРЕЖЕННЯ В ЛОКАЛЬНУ БАЗУ
+   1. М'ЯКЕ ЗАКРИТТЯ МОДАЛОК (БЕЗ БЛОКУВАННЯ ЕКРАНУ)
    ========================================== */
-function saveDataToLocalStorage() {
-    if (typeof productsDatabase !== 'undefined') {
-        localStorage.setItem('productsDatabase', JSON.stringify(productsDatabase));
-        localStorage.setItem('products', JSON.stringify(productsDatabase));
+document.addEventListener('click', function(e) {
+    const target = e.target;
+    
+    // Закриваємо ТІЛЬКИ якщо клікнули на явний темний оверлей заднього фону
+    if (target.classList.contains('modal-overlay') || 
+        target.classList.contains('modal-backdrop') || 
+        target.id === 'modal-backdrop-overlay') {
+        
+        target.classList.remove('active');
+        target.style.display = 'none';
+
+        // Прибираємо клас active з усіх відкритих модалок
+        document.querySelectorAll('.modal-overlay.active, .modal.active, .modal-backdrop.active').forEach(m => {
+            m.classList.remove('active');
+            m.style.display = 'none';
+        });
+
+        saveDataToLocalStorage();
     }
-}
+});
 
 
 /* ==========================================
@@ -79,7 +101,7 @@ window.duplicateProduct = function(index, event) {
 
 
 /* ==========================================
-   3. АВТОПІДСТАНОВКА ТА ЗБЕРЕЖЕННЯ ОДИНИЦІ І ЦІНИ
+   3. АВТОПІДСТАНОВКА ОДИНИЦІ ТА ЦІНИ
    ========================================== */
 document.addEventListener('change', function(e) {
     if (e.target && e.target.id === 'calcItemName') {
@@ -115,16 +137,16 @@ document.addEventListener('change', function(e) {
 
 
 /* ==========================================
-   4. ДВОХРЕЖИМНИЙ ПЕРЕГЛЯД ТА РЕДАГУВАННЯ ТОВАРУ
+   4. ВІДКРИТТЯ ТА РЕДАГУВАННЯ ТОВАРУ
    ========================================== */
 let activeProductRef = null;
 
-const originalOpenProductProfile = window.openProductProfile;
-window.openProductProfile = function(productId) {
-    if (typeof originalOpenProductProfile === 'function') {
-        originalOpenProductProfile(productId);
-    }
+// Зберігаємо оригінальну функцію
+if (!window.originalOpenProductProfile) {
+    window.originalOpenProductProfile = window.openProductProfile;
+}
 
+window.openProductProfile = function(productId) {
     if (typeof productsDatabase === 'undefined') return;
     
     const prod = productsDatabase.find(p => p.id === productId || p.id == productId);
@@ -135,9 +157,13 @@ window.openProductProfile = function(productId) {
         activeProductRef.composition = activeProductRef.calcRows || activeProductRef.calc || [];
     }
 
+    if (typeof window.originalOpenProductProfile === 'function') {
+        window.originalOpenProductProfile(productId);
+    }
+
     setTimeout(() => {
         setupProductViewMode();
-    }, 50);
+    }, 100);
 };
 
 function setupProductViewMode() {
@@ -228,7 +254,6 @@ document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'calcRowForm') {
         e.preventDefault();
         e.stopPropagation();
-        e.stopImmediatePropagation();
         
         if (!activeProductRef) return;
 
@@ -261,7 +286,7 @@ document.addEventListener('submit', function(e) {
 
         renderProductCalcRows(true);
     }
-}, true);
+});
 
 window.removeCalcItem = function(index) {
     if (!activeProductRef || !activeProductRef.composition) return;
@@ -299,7 +324,7 @@ window.handleCreateProduct = function(event) {
 
     if (typeof productsDatabase !== 'undefined') {
         productsDatabase.push(newProd);
-        saveDataToLocalStorage(); // Обов'язкове збереження
+        saveDataToLocalStorage();
     }
 
     nameInput.value = '';

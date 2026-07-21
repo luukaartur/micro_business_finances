@@ -15,21 +15,21 @@ backdrop.addEventListener('click', function() {
 });
 
 /* Перехоплення переходу між екранами */
-const originalGoToScreen = window.goToScreen;
-window.goToScreen = function(screenId) {
-    if (typeof originalGoToScreen === 'function') {
+if (typeof window.goToScreen === 'function') {
+    const originalGoToScreen = window.goToScreen;
+    window.goToScreen = function(screenId) {
         originalGoToScreen(screenId);
-    }
-    
-    const bd = document.getElementById('modal-backdrop-overlay');
-    if (bd) {
-        if (screenId !== 'screen-main') {
-            bd.classList.add('active');
-        } else {
-            bd.classList.remove('active');
+        
+        const bd = document.getElementById('modal-backdrop-overlay');
+        if (bd) {
+            if (screenId !== 'screen-main') {
+                bd.classList.add('active');
+            } else {
+                bd.classList.remove('active');
+            }
         }
-    }
-};
+    };
+}
 
 /* Закриття діалогових модальних вікон при кліку на їх тло */
 document.addEventListener('DOMContentLoaded', function() {
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 /* ==========================================
-   2. КЛОНУВАННЯ ТОВАРУ (100% ЧИСТЕ ЛОКАЛЬНЕ)
+   2. КЛОНУВАННЯ ТОВАРУ
    ========================================== */
 window.duplicateProduct = function(index, event) {
     if (event) {
@@ -63,10 +63,14 @@ window.duplicateProduct = function(index, event) {
     // Створюємо копію товару
     const newProduct = {
         id: 'prod_' + Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        business: original.business || (typeof state !== 'undefined' ? state.currentBusiness : ''),
         name: original.name + ' (копія)',
         cost: original.cost || 0,
-        components: Array.isArray(original.components) ? JSON.parse(JSON.stringify(original.components)) : [],
-        img: original.img || ''
+        imgUrl: original.imgUrl || original.img || '',
+        composition: Array.isArray(original.composition) 
+            ? JSON.parse(JSON.stringify(original.composition)) 
+            : (Array.isArray(original.components) ? JSON.parse(JSON.stringify(original.components)) : [])
     };
 
     // Додаємо в локальний масив товарів
@@ -80,95 +84,58 @@ window.duplicateProduct = function(index, event) {
     if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
 };
 
-/* Перехоплення відображення списку товарів для додавання кнопки клонування */
-const originalRenderProductsList = window.renderProductsList;
-window.renderProductsList = function() {
-    if (typeof originalRenderProductsList === 'function') {
-        originalRenderProductsList();
+/* Безпечне розширення рендеру списку товарів (додавання кнопки Клонувати) */
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.renderProductsList === 'function') {
+        const baseRenderProductsList = window.renderProductsList;
+        
+        window.renderProductsList = function() {
+            // Викликаємо оригінальний рендер з index.html
+            baseRenderProductsList();
+
+            const container = document.getElementById('productsListContainer');
+            if (!container) return;
+
+            const items = container.querySelectorAll('.product-item');
+            items.forEach((item, index) => {
+                if (!item.querySelector('.btn-duplicate-prod')) {
+                    let actionsDiv = item.querySelector('.product-item-actions');
+                    if (!actionsDiv) {
+                        actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'product-item-actions';
+                        actionsDiv.style.display = 'flex';
+                        actionsDiv.style.alignItems = 'center';
+                        actionsDiv.style.gap = '8px';
+                        
+                        const costSpan = item.querySelector('.product-cost');
+                        if (costSpan) actionsDiv.appendChild(costSpan);
+                        item.appendChild(actionsDiv);
+                    }
+
+                    const dupBtn = document.createElement('button');
+                    dupBtn.className = 'btn-duplicate-prod';
+                    dupBtn.type = 'button';
+                    dupBtn.style.padding = '4px 8px';
+                    dupBtn.style.borderRadius = '8px';
+                    dupBtn.style.border = '1px solid var(--border)';
+                    dupBtn.style.background = '#fff';
+                    dupBtn.style.cursor = 'pointer';
+                    dupBtn.style.fontSize = '12px';
+                    dupBtn.style.fontWeight = '600';
+                    dupBtn.innerText = '📋 Клонувати';
+                    dupBtn.onclick = (e) => duplicateProduct(index, e);
+                    
+                    actionsDiv.appendChild(dupBtn);
+                }
+            });
+        };
     }
-
-    const container = document.getElementById('productsListContainer');
-    if (!container) return;
-
-    const items = container.querySelectorAll('.product-item');
-    items.forEach((item, index) => {
-        if (!item.querySelector('.btn-duplicate-prod')) {
-            let actionsDiv = item.querySelector('.product-item-actions');
-            if (!actionsDiv) {
-                actionsDiv = document.createElement('div');
-                actionsDiv.className = 'product-item-actions';
-                const costSpan = item.querySelector('.product-cost');
-                if (costSpan) actionsDiv.appendChild(costSpan);
-                item.appendChild(actionsDiv);
-            }
-
-            const dupBtn = document.createElement('button');
-            dupBtn.className = 'btn-duplicate-prod';
-            dupBtn.type = 'button';
-            dupBtn.innerText = '📋 Клонувати';
-            dupBtn.onclick = (e) => duplicateProduct(index, e);
-            actionsDiv.appendChild(dupBtn);
-        }
-    });
-};
+});
 
 
 /* ==========================================
-   3. ОДИНИЦІ ВИМІРЮВАННЯ ТА ПОРОЖНЄ ПОЛЕ В КАЛЬКУЛЯЦІЇ
+   3. ОДИНИЦІ ВИМІРЮВАННЯ ТА КАЛЬКУЛЯЦІЯ
    ========================================== */
-
-/* Перевизначення випадаючого списку матеріалів з можливістю порожнього значення */
-const originalPopulateDropdown = window.populateDropdown;
-window.populateDropdown = function(elemId, arrayList) {
-    if (typeof originalPopulateDropdown === 'function') {
-        originalPopulateDropdown(elemId, arrayList);
-    }
-
-    if (elemId === 'calcItemName') {
-        const sel = document.getElementById(elemId);
-        if (sel) {
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = "";
-            defaultOpt.innerText = "-- Оберіть складову --";
-            defaultOpt.selected = true;
-            sel.insertBefore(defaultOpt, sel.firstChild);
-        }
-    }
-};
-
-/* Вбудовування вибору одиниць вимірювання у форму */
-function injectUnitSelector() {
-    const calcForm = document.getElementById('calcRowForm');
-    if (!calcForm || document.getElementById('calcItemUnit')) return;
-
-    const qtyGroup = document.getElementById('calcItemQty')?.closest('.form-group');
-    if (qtyGroup) {
-        const unitDiv = document.createElement('div');
-        unitDiv.className = 'form-group';
-        unitDiv.innerHTML = `
-            <label>Од. вим.</label>
-            <select id="calcItemUnit" class="standard-select">
-                <option value="шт">шт</option>
-                <option value="м">м</option>
-                <option value="см">см</option>
-                <option value="м²">м²</option>
-                <option value="кг">кг</option>
-                <option value="г">г</option>
-                <option value="л">л</option>
-                <option value="мл">мл</option>
-            </select>
-        `;
-        
-        const parentGrid = qtyGroup.parentElement;
-        if (parentGrid) {
-            parentGrid.style.gridTemplateColumns = '1fr 1fr 1.2fr';
-            parentGrid.appendChild(unitDiv);
-        }
-    }
-}
-
-document.addEventListener('DOMContentLoaded', injectUnitSelector);
-setTimeout(injectUnitSelector, 500);
 
 /* Автопідстановка збереженої ціни та одиниці вимірювання при виборі матеріалу */
 document.addEventListener('change', function(e) {
@@ -191,69 +158,19 @@ document.addEventListener('change', function(e) {
     }
 });
 
-/* Збереження матеріалу + додавання складової + очищення форми */
-const originalAddCalcRow = window.handleAddCalcRow;
-window.handleAddCalcRow = function(e) {
-    if (e) e.preventDefault();
-    
-    const nameElem = document.getElementById('calcItemName');
-    const matName = nameElem ? nameElem.value : '';
-    
-    if (!matName) {
-        if (typeof showToast === 'function') showToast("Оберіть складову зі списку!");
-        return;
+/* Збереження замовчувань для матеріалів при додаванні рядка */
+document.addEventListener('submit', function(e) {
+    if (e.target && e.target.id === 'calcRowForm') {
+        const nameElem = document.getElementById('calcItemName');
+        const matName = nameElem ? nameElem.value : '';
+        const matPrice = parseFloat(document.getElementById('calcItemPrice')?.value) || 0;
+        const unitSelect = document.getElementById('calcItemUnit');
+        const unit = unitSelect ? unitSelect.value : 'шт';
+
+        if (matName) {
+            let savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
+            savedParams[matName] = { price: matPrice, unit: unit };
+            localStorage.setItem('material_defaults', JSON.stringify(savedParams));
+        }
     }
-
-    const qty = parseFloat(document.getElementById('calcItemQty').value) || 1;
-    const matPrice = parseFloat(document.getElementById('calcItemPrice').value) || 0;
-    const unitSelect = document.getElementById('calcItemUnit');
-    const unit = unitSelect ? unitSelect.value : 'шт';
-
-    // Запам'ятовуємо характеристики для цього матеріалу
-    let savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
-    savedParams[matName] = { price: matPrice, unit: unit };
-    localStorage.setItem('material_defaults', JSON.stringify(savedParams));
-
-    // Додаємо в поточний список калькуляції
-    if (typeof currentCalculatorRows !== 'undefined') {
-        currentCalculatorRows.push({ name: matName, qty: qty, price: matPrice, unit: unit, total: qty * matPrice });
-        if (typeof renderCalculatorRows === 'function') renderCalculatorRows();
-    }
-
-    // Очищаємо форму після додавання
-    if (nameElem) nameElem.value = "";
-    document.getElementById('calcItemQty').value = "1";
-    document.getElementById('calcItemPrice').value = "";
-};
-
-/* Перевизначення відображення рядків калькуляції для виведення одиниць вимірювання */
-const originalRenderCalculatorRows = window.renderCalculatorRows;
-window.renderCalculatorRows = function() {
-    const container = document.getElementById('calcRowsContainer');
-    if (!container || typeof currentCalculatorRows === 'undefined') {
-        if (typeof originalRenderCalculatorRows === 'function') originalRenderCalculatorRows();
-        return;
-    }
-
-    container.innerHTML = '';
-    let grandTotal = 0;
-
-    currentCalculatorRows.forEach((row, idx) => {
-        const rowTotal = row.qty * row.price;
-        grandTotal += rowTotal;
-        const unitStr = row.unit || 'шт';
-
-        const div = document.createElement('div');
-        div.className = 'calc-row-item';
-        div.innerHTML = `
-            <span>${row.name}</span>
-            <span>${row.qty} ${unitStr}</span>
-            <span>${rowTotal.toLocaleString('uk-UA')} ₴</span>
-            <button type="button" class="btn-delete-row" onclick="deleteCalcRow(${idx})">✕</button>
-        `;
-        container.appendChild(div);
-    });
-
-    const totalElem = document.getElementById('calcTotalSum');
-    if (totalElem) totalElem.innerText = grandTotal.toLocaleString('uk-UA') + ' ₴';
-};
+});

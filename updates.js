@@ -31,11 +31,23 @@ window.goToScreen = function(screenId) {
     }
 };
 
+/* Закриття діалогових модальних вікон при кліку на їх тло */
+document.addEventListener('DOMContentLoaded', function() {
+    const modals = document.querySelectorAll('.modal-overlay');
+    modals.forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+            }
+        });
+    });
+});
+
 
 /* ==========================================
-   2. КЛОНУВАННЯ ТОВАРУ
+   2. КЛОНУВАННЯ ТОВАРУ (З ЗБЕРЕЖЕННЯМ В GOOGLE)
    ========================================== */
-window.duplicateProduct = function(productId, event) {
+window.duplicateProduct = async function(productId, event) {
     if (event) event.stopPropagation();
     
     const prod = productsDatabase.find(p => p.id === productId || p.name === productId);
@@ -50,16 +62,17 @@ window.duplicateProduct = function(productId, event) {
     };
 
     productsDatabase.push(newProduct);
-    
-    if (typeof appendRowToGoogle === 'function') {
-        appendRowToGoogle(['PRODUCT', newProduct.id, newProduct.name, newProduct.cost, JSON.stringify(newProduct.components), newProduct.img]);
-    }
 
     if (typeof renderProductsList === 'function') {
         renderProductsList();
     }
     
-    if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
+    if (typeof showToast === 'function') showToast("Дублювання товару...");
+
+    if (typeof appendRowToGoogle === 'function') {
+        await appendRowToGoogle(['PRODUCT', newProduct.id, newProduct.name, newProduct.cost, JSON.stringify(newProduct.components), newProduct.img]);
+        if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
+    }
 };
 
 /* Перехоплення відображення списку товарів для виводу кнопки клонування */
@@ -98,8 +111,27 @@ window.renderProductsList = function() {
 
 
 /* ==========================================
-   3. ОДИНИЦІ ВИМІРЮВАННЯ ТА ЗБЕРЕЖЕННЯ ЦІН
+   3. ОДИНИЦІ ВИМІРЮВАННЯ ТА ПОРОЖНЄ ПОЛЕ В КАЛЬКУЛЯЦІЇ
    ========================================== */
+
+/* Перевизначення випадаючого списку матеріалів з можливістю порожнього значення */
+const originalPopulateDropdown = window.populateDropdown;
+window.populateDropdown = function(elemId, arrayList) {
+    if (typeof originalPopulateDropdown === 'function') {
+        originalPopulateDropdown(elemId, arrayList);
+    }
+
+    if (elemId === 'calcItemName') {
+        const sel = document.getElementById(elemId);
+        if (sel) {
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = "";
+            defaultOpt.innerText = "-- Оберіть складову --";
+            defaultOpt.selected = true;
+            sel.insertBefore(defaultOpt, sel.firstChild);
+        }
+    }
+};
 
 /* Вбудовування вибору одиниць вимірювання у форму */
 function injectUnitSelector() {
@@ -132,7 +164,6 @@ function injectUnitSelector() {
     }
 }
 
-// Викликаємо вбудовування після завантаження сторінки
 document.addEventListener('DOMContentLoaded', injectUnitSelector);
 setTimeout(injectUnitSelector, 500);
 
@@ -140,13 +171,14 @@ setTimeout(injectUnitSelector, 500);
 document.addEventListener('change', function(e) {
     if (e.target && e.target.id === 'calcItemName') {
         const selectedMaterial = e.target.value;
-        const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
+        if (!selectedMaterial) return;
 
+        const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
         if (savedParams[selectedMaterial]) {
             const priceInput = document.getElementById('calcItemPrice');
             const unitSelect = document.getElementById('calcItemUnit');
             
-            if (priceInput && savedParams[selectedMaterial].price) {
+            if (priceInput && savedParams[selectedMaterial].price !== undefined) {
                 priceInput.value = savedParams[selectedMaterial].price;
             }
             if (unitSelect && savedParams[selectedMaterial].unit) {
@@ -156,31 +188,39 @@ document.addEventListener('change', function(e) {
     }
 });
 
-/* Збереження матеріалу + перевизначення додавання складової */
+/* Збереження матеріалу + додавання складової + очищення форми */
 const originalAddCalcRow = window.handleAddCalcRow;
 window.handleAddCalcRow = function(e) {
     if (e) e.preventDefault();
     
-    const matName = document.getElementById('calcItemName').value;
+    const nameElem = document.getElementById('calcItemName');
+    const matName = nameElem ? nameElem.value : '';
+    
+    if (!matName) {
+        if (typeof showToast === 'function') showToast("Оберіть складову зі списку!");
+        return;
+    }
+
     const qty = parseFloat(document.getElementById('calcItemQty').value) || 1;
     const matPrice = parseFloat(document.getElementById('calcItemPrice').value) || 0;
     const unitSelect = document.getElementById('calcItemUnit');
     const unit = unitSelect ? unitSelect.value : 'шт';
 
-    if (matName) {
-        let savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
-        savedParams[matName] = { price: matPrice, unit: unit };
-        localStorage.setItem('material_defaults', JSON.stringify(savedParams));
-    }
+    // Запам'ятовуємо характеристики для цього матеріалу
+    let savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
+    savedParams[matName] = { price: matPrice, unit: unit };
+    localStorage.setItem('material_defaults', JSON.stringify(savedParams));
 
-    // Додаємо рядок з урахуванням одиниці вимірювання
+    // Додаємо в поточний список калькуляції
     if (typeof currentCalculatorRows !== 'undefined') {
         currentCalculatorRows.push({ name: matName, qty: qty, price: matPrice, unit: unit, total: qty * matPrice });
         if (typeof renderCalculatorRows === 'function') renderCalculatorRows();
-        document.getElementById('calcRowForm').reset();
-    } else if (typeof originalAddCalcRow === 'function') {
-        originalAddCalcRow(e);
     }
+
+    // Очищаємо форму після додавання
+    if (nameElem) nameElem.value = "";
+    document.getElementById('calcItemQty').value = "1";
+    document.getElementById('calcItemPrice').value = "";
 };
 
 /* Перевизначення відображення рядків калькуляції для виведення одиниць вимірювання */

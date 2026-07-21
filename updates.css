@@ -33,8 +33,37 @@
     }
 }
 
+
 /* ==========================================
-   2. ДЕСКТОПНІ МОДАЛЬНІ ВІКНА ТА ОВЕРЛЕЙ
+   2. РОЗМИВАЮЧИЙ ТА ЗАТЕМНЮЮЧИЙ ФОН ДЛЯ ВІКОН (КРОК 1)
+   ========================================== */
+#modal-backdrop-overlay,
+.modal-overlay,
+.modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0, 0, 0, 0.45) !important; /* Напівпрозоре затемнення */
+    backdrop-filter: blur(5px) !important;             /* Розмиття фону */
+    -webkit-backdrop-filter: blur(5px) !important;     /* Підтримка iOS/Safari */
+    z-index: 1999;
+    display: none;
+    transition: opacity 0.2s ease;
+}
+
+#modal-backdrop-overlay.active,
+.modal-overlay.active,
+.modal-backdrop.active {
+    display: block !important;
+}
+
+/* Звичайні діалогові модалки - поверх оверлею */
+.modal-overlay {
+    z-index: 3000 !important;
+}
+
+
+/* ==========================================
+   3. ДЕСКТОПНІ МОДАЛЬНІ ВІКНА
    ========================================== */
 @media (min-width: 800px) {
     .content-panel .screen.active {
@@ -62,33 +91,17 @@
     }
 }
 
-/* Напівпрозоре тло під вікнами */
-#modal-backdrop-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.45);
-    backdrop-filter: blur(2px);
-    z-index: 1999;
-    display: none;
-}
-#modal-backdrop-overlay.active {
-    display: block;
-}
-
-/* Звичайні діалогові модалки (директорії, швидкі фінанси, виплати) */
-.modal-overlay {
-    z-index: 3000 !important;
-}
 
 /* ==========================================
-   3. ВЕРХНІЙ ШАР ДЛЯ ЧОРНИХ СПОВІЩЕНЬ (TOAST)
+   4. ВЕРХНІЙ ШАР ДЛЯ СПОВІЩЕНЬ (TOAST)
    ========================================== */
 .toast {
     z-index: 10000 !important;
 }
 
+
 /* ==========================================
-   4. КНОПКА КЛОНУВАННЯ ТОВАРУ
+   5. КНОПКА КЛОНУВАННЯ ТОВАРУ
    ========================================== */
 .product-item {
     display: flex !important;

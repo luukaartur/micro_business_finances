@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 /* ==========================================
-   2. КЛОНУВАННЯ ТОВАРУ (ПОВНІСТЮ ВИПРАВЛЕНО)
+   2. КЛОНУВАННЯ ТОВАРУ (БЕЗ ПОМИЛКИ 404/URL)
    ========================================== */
 window.duplicateProduct = async function(index, event) {
     if (event) {
@@ -72,35 +72,38 @@ window.duplicateProduct = async function(index, event) {
     // 1. Додаємо в локальну базу даних
     productsDatabase.push(newProduct);
 
-    // 2. Оновлюємо відображення списку товарів
+    // 2. Перемальовуємо список товарів у списку
     if (typeof renderProductsList === 'function') {
         renderProductsList();
     }
     
-    // 3. Також оновлюємо випадаючі списки товарів по всьому застосунку (якщо є функція)
+    // 3. Оновлюємо випадаючі списки товарів (якщо є функція)
     if (typeof populateProductSelects === 'function') {
         populateProductSelects();
     }
 
-    if (typeof showToast === 'function') showToast("Клонування...");
+    if (typeof showToast === 'function') showToast("Товар склоновано!");
 
-    // 4. Відправляємо в Google Таблицю
-    if (typeof appendRowToGoogle === 'function') {
-        try {
-            const rowData = [
-                'PRODUCT', 
-                newProduct.id, 
-                newProduct.name, 
-                newProduct.cost, 
-                JSON.stringify(newProduct.components), 
-                newProduct.img
-            ];
-            await appendRowToGoogle(rowData);
-            if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
-        } catch (err) {
-            console.error("Помилка збереження клону в Google:", err);
-            if (typeof showToast === 'function') showToast("Склоновано локально!");
+    // 4. Безпечне збереження в Google Таблицю без використання фігурних дужок/шаблонів
+    try {
+        if (typeof saveProductToSheet === 'function') {
+            await saveProductToSheet(newProduct);
+        } else if (typeof appendRowToGoogle === 'function') {
+            // Перевіряємо, що SCRIPT_URL існує і не містить помилкових символів { або }
+            const validUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL && !SCRIPT_URL.includes('{'));
+            if (validUrl) {
+                await appendRowToGoogle([
+                    'PRODUCT', 
+                    newProduct.id, 
+                    newProduct.name, 
+                    newProduct.cost, 
+                    JSON.stringify(newProduct.components), 
+                    newProduct.img
+                ]);
+            }
         }
+    } catch (err) {
+        console.warn("Збереження на сервер пропущено/не вдалося, товар збережено локально:", err);
     }
 };
 

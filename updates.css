@@ -33,39 +33,41 @@
     }
 }
 
-
 /* ==========================================
-   2. РОЗМИВАЮЧИЙ ТА ЗАТЕМНЮЮЧИЙ ФОН ДЛЯ ВІКОН (КРОК 1)
+   2. ЕФЕКТ РОЗМИВАННЯ ТА ЗАТЕМНЕННЯ ФОНУ
    ========================================== */
-#modal-backdrop-overlay,
-.modal-overlay,
-.modal-backdrop {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 0, 0, 0.45) !important; /* Напівпрозоре затемнення */
-    backdrop-filter: blur(5px) !important;             /* Розмиття фону */
-    -webkit-backdrop-filter: blur(5px) !important;     /* Підтримка iOS/Safari */
-    z-index: 1999;
-    display: none;
-    transition: opacity 0.2s ease;
-}
-
-#modal-backdrop-overlay.active,
-.modal-overlay.active,
-.modal-backdrop.active {
-    display: block !important;
-}
-
-/* Звичайні діалогові модалки - поверх оверлею */
 .modal-overlay {
-    z-index: 3000 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: rgba(0, 0, 0, 0.45) !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    z-index: 9000 !important;
+    display: none;
+    align-items: center;
+    justify-content: center;
 }
 
+.modal-overlay.active {
+    display: flex !important;
+}
 
-/* ==========================================
-   3. ДЕСКТОПНІ МОДАЛЬНІ ВІКНА
-   ========================================== */
+/* На ПК для відкритих екранів додаємо розмитий фон */
 @media (min-width: 800px) {
+    body.has-active-screen::before {
+        content: "";
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 1500;
+        pointer-events: auto;
+    }
+
     .content-panel .screen.active {
         position: fixed !important;
         top: 50% !important;
@@ -81,53 +83,18 @@
         box-shadow: 0 20px 50px rgba(0,0,0,0.25) !important;
         z-index: 2000 !important;
     }
-
-    .content-panel .screen.active .back-link {
-        display: inline-block !important;
-        float: right;
-        font-size: 20px !important;
-        color: var(--gray-text) !important;
-        margin-bottom: 10px !important;
-    }
 }
 
-
 /* ==========================================
-   4. ВЕРХНІЙ ШАР ДЛЯ СПОВІЩЕНЬ (TOAST)
+   3. СПОВІЩЕННЯ ТА ДОДОТКОВІ ЕЛЕМЕНТИ
    ========================================== */
 .toast {
     z-index: 10000 !important;
 }
 
-
-/* ==========================================
-   5. КНОПКА КЛОНУВАННЯ ТОВАРУ
-   ========================================== */
 .product-item {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
     gap: 10px !important;
-}
-
-.product-item-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.btn-duplicate-prod {
-    background: #E5E5EA;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 12px;
-    cursor: pointer;
-    font-weight: 700;
-    transition: all 0.2s ease;
-}
-
-.btn-duplicate-prod:hover {
-    background: var(--bahama-yellow);
-    color: #fff;
 }

@@ -45,33 +45,62 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 /* ==========================================
-   2. КЛОНУВАННЯ ТОВАРУ (З ЗБЕРЕЖЕННЯМ В GOOGLE)
+   2. КЛОНУВАННЯ ТОВАРУ (ПОВНІСТЮ ВИПРАВЛЕНО)
    ========================================== */
-window.duplicateProduct = async function(productId, event) {
-    if (event) event.stopPropagation();
+window.duplicateProduct = async function(index, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
     
-    const prod = productsDatabase.find(p => p.id === productId || p.name === productId);
-    if (!prod) return;
+    if (typeof productsDatabase === 'undefined' || !productsDatabase[index]) {
+        if (typeof showToast === 'function') showToast("Помилка: товар не знайдено");
+        return;
+    }
 
+    const original = productsDatabase[index];
+    
+    // Створюємо копію об'єкта
     const newProduct = {
         id: 'prod_' + Date.now(),
-        name: prod.name + ' (копія)',
-        img: prod.img || '',
-        cost: prod.cost || 0,
-        components: JSON.parse(JSON.stringify(prod.components || []))
+        name: original.name + ' (копія)',
+        cost: original.cost || 0,
+        components: Array.isArray(original.components) ? JSON.parse(JSON.stringify(original.components)) : [],
+        img: original.img || ''
     };
 
+    // 1. Додаємо в локальну базу даних
     productsDatabase.push(newProduct);
 
+    // 2. Оновлюємо відображення списку товарів
     if (typeof renderProductsList === 'function') {
         renderProductsList();
     }
     
-    if (typeof showToast === 'function') showToast("Дублювання товару...");
+    // 3. Також оновлюємо випадаючі списки товарів по всьому застосунку (якщо є функція)
+    if (typeof populateProductSelects === 'function') {
+        populateProductSelects();
+    }
 
+    if (typeof showToast === 'function') showToast("Клонування...");
+
+    // 4. Відправляємо в Google Таблицю
     if (typeof appendRowToGoogle === 'function') {
-        await appendRowToGoogle(['PRODUCT', newProduct.id, newProduct.name, newProduct.cost, JSON.stringify(newProduct.components), newProduct.img]);
-        if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
+        try {
+            const rowData = [
+                'PRODUCT', 
+                newProduct.id, 
+                newProduct.name, 
+                newProduct.cost, 
+                JSON.stringify(newProduct.components), 
+                newProduct.img
+            ];
+            await appendRowToGoogle(rowData);
+            if (typeof showToast === 'function') showToast("Товар успішно склоновано!");
+        } catch (err) {
+            console.error("Помилка збереження клону в Google:", err);
+            if (typeof showToast === 'function') showToast("Склоновано локально!");
+        }
     }
 };
 
@@ -88,23 +117,21 @@ window.renderProductsList = function() {
     const items = container.querySelectorAll('.product-item');
     items.forEach((item, index) => {
         if (!item.querySelector('.btn-duplicate-prod')) {
-            const prodData = productsDatabase[index];
-            if (prodData) {
-                let actionsDiv = item.querySelector('.product-item-actions');
-                if (!actionsDiv) {
-                    actionsDiv = document.createElement('div');
-                    actionsDiv.className = 'product-item-actions';
-                    const costSpan = item.querySelector('.product-cost');
-                    if (costSpan) actionsDiv.appendChild(costSpan);
-                    item.appendChild(actionsDiv);
-                }
-
-                const dupBtn = document.createElement('button');
-                dupBtn.className = 'btn-duplicate-prod';
-                dupBtn.innerText = '📋 Клонувати';
-                dupBtn.onclick = (e) => duplicateProduct(prodData.id || prodData.name, e);
-                actionsDiv.appendChild(dupBtn);
+            let actionsDiv = item.querySelector('.product-item-actions');
+            if (!actionsDiv) {
+                actionsDiv = document.createElement('div');
+                actionsDiv.className = 'product-item-actions';
+                const costSpan = item.querySelector('.product-cost');
+                if (costSpan) actionsDiv.appendChild(costSpan);
+                item.appendChild(actionsDiv);
             }
+
+            const dupBtn = document.createElement('button');
+            dupBtn.className = 'btn-duplicate-prod';
+            dupBtn.type = 'button';
+            dupBtn.innerText = '📋 Клонувати';
+            dupBtn.onclick = (e) => duplicateProduct(index, e);
+            actionsDiv.appendChild(dupBtn);
         }
     });
 };

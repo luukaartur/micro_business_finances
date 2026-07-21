@@ -1,5 +1,5 @@
 /* ==========================================
-   1. ЗАКРИТТЯ ПО КЛІКУ ПОЗА КАРТКОЮ
+   1. ЗАКРИТТЯ ПО КЛІКУ ПОЗА МОДАЛКОЮ
    ========================================== */
 document.addEventListener('click', function(e) {
     const activeModal = document.querySelector('.modal-overlay.active, .modal.active, .modal-backdrop.active');
@@ -62,31 +62,18 @@ window.duplicateProduct = function(index, event) {
 
 
 /* ==========================================
-   3. АВТОПІДСТАНОВКА ОДИНИЦІ ТА ЦІНИ ПРИ ЗМІНІ МАТЕРІАЛУ
+   3. АВТОПІДСТАНОВКА ОДИНИЦІ ТА ЦІНИ ДЛЯ #calcItemName
    ========================================== */
 document.addEventListener('change', function(e) {
-    if (e.target && e.target.tagName === 'SELECT') {
+    // Регулюємо вибір матеріалу тільки в полі додавання калькуляції
+    if (e.target && e.target.id === 'calcItemName') {
         const selectedMaterial = e.target.value;
         if (!selectedMaterial) return;
 
-        const parentContainer = e.target.closest('.modal-card, .modal, body') || document.body;
-        
-        // Знаходимо селект одиниці виміру
-        const selects = Array.from(parentContainer.querySelectorAll('select'));
-        const unitSelect = selects.find(s => s !== e.target);
-        
-        // Знаходимо інпут ціни
-        const inputs = parentContainer.querySelectorAll('input');
-        let priceInput = null;
+        const unitSelect = document.getElementById('calcItemUnit');
+        const priceInput = document.getElementById('calcItemPrice');
 
-        inputs.forEach(inp => {
-            const labelText = (inp.parentElement ? inp.parentElement.innerText : '').toUpperCase();
-            if (labelText.includes('ЦІНА') || labelText.includes('ОДИНИЦЮ')) {
-                priceInput = inp;
-            }
-        });
-
-        // Визначаємо одиницю
+        // 1. Автоперемикання одиниці виміру
         if (unitSelect) {
             const lowerName = selectedMaterial.toLowerCase();
             if (lowerName.includes('тканина') || lowerName.includes('нитки') || lowerName.includes('секонд') || lowerName.includes('наповнювач')) {
@@ -98,7 +85,7 @@ document.addEventListener('change', function(e) {
             }
         }
 
-        // Визначаємо ціну
+        // 2. Підстановка збереженої ціни
         const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
         if (savedParams[selectedMaterial] && priceInput) {
             priceInput.value = savedParams[selectedMaterial].price || 0;
@@ -108,7 +95,7 @@ document.addEventListener('change', function(e) {
 
 
 /* ==========================================
-   4. ІНТЕГРАЦІЯ З РІДНОЮ КАЛЬКУЛЯЦІЄЮ ТОВАРУ
+   4. БЕЗПЕЧНА РОБОТА З РІДНИМИ ID ВЕБ-ДОДАТКУ
    ========================================== */
 let activeProductRef = null;
 
@@ -124,85 +111,64 @@ window.openProductProfile = function(productId) {
     if (!prod) return;
 
     activeProductRef = prod;
-
     if (!activeProductRef.composition) {
         activeProductRef.composition = activeProductRef.calcRows || activeProductRef.calc || [];
     }
 
+    // Чекаємо відкриття екрану і безпечно заповнюємо лише список
     setTimeout(() => {
-        updateProductUI();
-    }, 100);
+        renderProductCalcRows();
+    }, 50);
 };
 
-function updateProductUI() {
-    if (!activeProductRef) return;
-
-    const comps = activeProductRef.composition || activeProductRef.calcRows || activeProductRef.calc || [];
+function renderProductCalcRows() {
+    const container = document.getElementById('calcRowsContainer');
+    const totalElem = document.getElementById('calcTotalSum');
     
-    // Перераховуємо суму собівартості
+    if (!container || !activeProductRef) return;
+
+    const comps = activeProductRef.composition || activeProductRef.calcRows || [];
     let totalSum = 0;
-    comps.forEach(item => {
-        const qty = parseFloat(item.qty || item.quantity) || 1;
-        const price = parseFloat(item.price || item.cost) || 0;
-        totalSum += (qty * price);
-    });
+
+    if (comps.length === 0) {
+        container.innerHTML = '<div style="color: #8e8e93; font-size: 13px; padding: 10px 0;">Калькуляція порожня</div>';
+    } else {
+        let html = '';
+        comps.forEach((item, idx) => {
+            const qty = parseFloat(item.qty || item.quantity) || 1;
+            const price = parseFloat(item.price || item.cost) || 0;
+            const sum = qty * price;
+            totalSum += sum;
+
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #e0e0e0; font-size: 13px;">
+                    <div>
+                        <strong>${item.name || 'Матеріал'}</strong>
+                        <div style="font-size: 11px; color: #666;">${qty} ${item.unit || 'шт'} × ${price} ₴</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-weight: 700;">${sum.toLocaleString('uk-UA')} ₴</span>
+                        <button type="button" onclick="removeCalcItem(${idx})" style="background:none; border:none; color:#ff3b30; font-weight:bold; cursor:pointer;">✕</button>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    if (totalElem) {
+        totalElem.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
+    }
 
     activeProductRef.cost = totalSum;
-
-    // Безпечно викликаємо родний рендер списку, якщо він є
-    try {
-        if (typeof renderProductsList === 'function') renderProductsList();
-    } catch(e) {
-        console.warn("Помилка рендеру головного списку:", e);
-    }
 }
 
-// Додавання нової складової при натисканні на кнопку "+"
-document.addEventListener('click', function(e) {
-    const btn = e.target.closest('button');
-    if (!btn || !activeProductRef) return;
-
-    const btnText = btn.innerText.trim();
-    if (btnText !== '+' && !btn.classList.contains('btn-add')) return;
-
-    const parent = btn.closest('.modal-card, .modal, body') || document.body;
-    const selectMat = parent.querySelector('select');
-    if (!selectMat || !selectMat.value) return;
-
-    const matName = selectMat.value;
-    let qty = 1;
-    let price = 0;
-    let unit = 'шт';
-
-    // Одиниця виміру
-    const selects = Array.from(parent.querySelectorAll('select'));
-    const unitSelect = selects.find(s => s !== selectMat);
-    if (unitSelect) unit = unitSelect.value;
-
-    // Кількість та Ціна
-    const inputs = parent.querySelectorAll('input');
-    inputs.forEach(inp => {
-        const val = parseFloat(inp.value);
-        const parentTxt = (inp.parentElement ? inp.parentElement.innerText : '').toUpperCase();
-
-        if (parentTxt.includes('КІЛЬКІСТЬ') || inp.type === 'number') {
-            if (!isNaN(val)) qty = val;
-        } else if (parentTxt.includes('ЦІНА') || parentTxt.includes('ОДИНИЦЮ')) {
-            if (!isNaN(val)) price = val;
-        }
-    });
-
-    if (!activeProductRef.composition) activeProductRef.composition = [];
-
-    activeProductRef.composition.push({
-        name: matName,
-        qty: qty,
-        price: price,
-        unit: unit
-    });
-
+// Видалення складової зі списку
+window.removeCalcItem = function(index) {
+    if (!activeProductRef || !activeProductRef.composition) return;
+    
+    activeProductRef.composition.splice(index, 1);
     activeProductRef.calcRows = activeProductRef.composition;
-    activeProductRef.calc = activeProductRef.composition;
-
-    updateProductUI();
-});
+    
+    renderProductCalcRows();
+};

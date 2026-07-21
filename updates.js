@@ -72,7 +72,7 @@ document.addEventListener('change', function(e) {
         const unitSelect = document.getElementById('calcItemUnit');
         const priceInput = document.getElementById('calcItemPrice');
 
-        // Авто-перемикання одиниці
+        // Автоперемикання одиниці
         if (unitSelect) {
             const lowerName = selectedMaterial.toLowerCase();
             if (lowerName.includes('тканина') || lowerName.includes('нитки') || lowerName.includes('секонд') || lowerName.includes('наповнювач')) {
@@ -84,7 +84,7 @@ document.addEventListener('change', function(e) {
             }
         }
 
-        // Авто-підстановка ціни
+        // Автопідстановка ціни
         const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
         if (savedParams[selectedMaterial] && priceInput) {
             priceInput.value = savedParams[selectedMaterial].price || 0;
@@ -94,11 +94,11 @@ document.addEventListener('change', function(e) {
 
 
 /* ==========================================
-   4. ВІДОБРАЖЕННЯ ТА ДОДАВАННЯ СКЛАДНИКІВ
+   4. ДВОХРЕЖИМНИЙ ПЕРЕГЛЯД ТА РЕДАГУВАННЯ ТОВАРУ
    ========================================== */
 let activeProductRef = null;
 
-// Перехоплюємо відкриття товару
+// Перехоплюємо відкриття картки товару
 const originalOpenProductProfile = window.openProductProfile;
 window.openProductProfile = function(productId) {
     if (typeof originalOpenProductProfile === 'function') {
@@ -116,12 +116,50 @@ window.openProductProfile = function(productId) {
     }
 
     setTimeout(() => {
-        renderProductCalcRows();
-    }, 100);
+        setupProductViewMode();
+    }, 50);
 };
 
-// Функція рендеру списку позицій у калькуляторі
-function renderProductCalcRows() {
+// 4.1. Налаштування режиму ПЕРЕГЛЯДУ
+function setupProductViewMode() {
+    const calcBox = document.querySelector('.cost-calculator-box');
+    const formGroup = document.getElementById('calcRowForm');
+    
+    if (!calcBox || !activeProductRef) return;
+
+    if (formGroup) formGroup.style.display = 'none';
+
+    renderProductCalcRows(false);
+
+    let editBtn = document.getElementById('toggleEditProductBtn');
+    if (!editBtn) {
+        editBtn = document.createElement('button');
+        editBtn.id = 'toggleEditProductBtn';
+        editBtn.className = 'btn-main btn-outline';
+        editBtn.style.marginTop = '15px';
+        editBtn.style.width = '100%';
+        editBtn.innerHTML = '✏️ Редагувати складові';
+        editBtn.onclick = enableEditMode;
+
+        calcBox.parentElement.insertBefore(editBtn, formGroup);
+    } else {
+        editBtn.style.display = 'block';
+    }
+}
+
+// 4.2. Перехід у режим РЕДАГУВАННЯ
+window.enableEditMode = function() {
+    const formGroup = document.getElementById('calcRowForm');
+    const editBtn = document.getElementById('toggleEditProductBtn');
+
+    if (formGroup) formGroup.style.display = 'block';
+    if (editBtn) editBtn.style.display = 'none';
+
+    renderProductCalcRows(true);
+};
+
+// 4.3. Рендер списку складових
+function renderProductCalcRows(isEditMode = false) {
     const container = document.getElementById('calcRowsContainer');
     const totalElem = document.getElementById('calcTotalSum');
     
@@ -148,7 +186,7 @@ function renderProductCalcRows() {
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-weight: 700; color: #111;">${sum.toLocaleString('uk-UA')} ₴</span>
-                        <button type="button" onclick="removeCalcItem(${idx})" style="background: #ffe5e5; border: none; color: #ff3b30; width: 22px; height: 22px; border-radius: 50%; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">✕</button>
+                        ${isEditMode ? `<button type="button" onclick="removeCalcItem(${idx})" style="background: #ffe5e5; border: none; color: #ff3b30; width: 22px; height: 22px; border-radius: 50%; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">✕</button>` : ''}
                     </div>
                 </div>
             `;
@@ -160,15 +198,13 @@ function renderProductCalcRows() {
         totalElem.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
     }
 
-    // Оновлюємо собівартість
     activeProductRef.cost = totalSum;
 
-    // Оновлюємо верхню цифру Собівартості
     const topCost = document.querySelector('.product-cost, [data-cost]');
     if (topCost) topCost.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
 }
 
-// Перехоплюємо натискання кнопки "Додати в калькулятор" (submit форми)
+// 4.4. Додавання нового елемента з форми
 document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'calcRowForm') {
         e.preventDefault();
@@ -195,16 +231,14 @@ document.addEventListener('submit', function(e) {
         activeProductRef.calcRows = activeProductRef.composition;
         activeProductRef.calc = activeProductRef.composition;
 
-        // Очищаємо інпути після додавання
         if (priceInput) priceInput.value = '';
         if (qtyInput) qtyInput.value = '1';
 
-        // Перемальовуємо список
-        renderProductCalcRows();
+        renderProductCalcRows(true);
     }
 });
 
-// Видалення складової зі списку
+// 4.5. Видалення складової
 window.removeCalcItem = function(index) {
     if (!activeProductRef || !activeProductRef.composition) return;
     
@@ -212,5 +246,52 @@ window.removeCalcItem = function(index) {
     activeProductRef.calcRows = activeProductRef.composition;
     activeProductRef.calc = activeProductRef.composition;
     
-    renderProductCalcRows();
+    renderProductCalcRows(true);
+};
+
+
+/* ==========================================
+   5. СТВОРЕННЯ НОВОГО ТОВАРУ (#newProductForm)
+   ========================================== */
+window.handleCreateProduct = function(event) {
+    if (event) event.preventDefault();
+
+    const nameInput = document.getElementById('newProdName');
+    const imgInput = document.getElementById('newProdImg');
+
+    if (!nameInput || !nameInput.value.trim()) return;
+
+    const newProd = {
+        id: 'prod_' + Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        business: typeof state !== 'undefined' ? state.currentBusiness : '',
+        name: nameInput.value.trim(),
+        cost: 0,
+        imgUrl: imgInput ? imgInput.value.trim() : '',
+        composition: [],
+        calcRows: [],
+        calc: []
+    };
+
+    if (typeof productsDatabase !== 'undefined') {
+        productsDatabase.push(newProd);
+    }
+
+    // Очищаємо поля форми
+    nameInput.value = '';
+    if (imgInput) imgInput.value = '';
+
+    // Оновлюємо список товарів та відкриваємо створений товар
+    try {
+        if (typeof renderProductsList === 'function') renderProductsList();
+    } catch(err) {
+        console.warn(err);
+    }
+
+    if (typeof showToast === 'function') showToast("Новий виріб створено!");
+
+    // Переходимо до профілю нового товару для наповнення складовими
+    if (typeof openProductProfile === 'function') {
+        openProductProfile(newProd.id);
+    }
 };

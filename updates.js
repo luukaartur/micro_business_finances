@@ -1,30 +1,39 @@
 /* ==========================================
-   1. ЗАКРИТТЯ ПО КЛІКУ ПОЗА МОДАЛКОЮ (КРОК НАЗАД)
+   1. БЕЗПЕЧНЕ ЗАКРИТТЯ ПО КЛІКУ ПОЗА МОДАЛКОЮ
    ========================================== */
 document.addEventListener('click', function(e) {
-    // Шукаємо всі відкриті модальні вікна чи екрани
-    const activeModals = Array.from(document.querySelectorAll('.modal-overlay.active, .modal.active, .modal-backdrop.active, .modal-card.active, .screen.active'));
-    
-    if (activeModals.length === 0) return;
+    // Реагуємо ТІЛЬКИ якщо клікнули ПРЯМО по затемненому оверлею (фона)
+    const isOverlayClick = e.target.classList.contains('modal-overlay') || 
+                           e.target.classList.contains('modal-backdrop') || 
+                           e.target.id === 'modal-backdrop-overlay';
 
-    // Беремо найостаннє відкрите вікно (верхній шар)
-    const topModal = activeModals[activeModals.length - 1];
-
-    // Якщо клікнули прямо по затемненому фону (оверлею)
-    if (e.target === topModal || e.target.classList.contains('modal-overlay') || e.target.classList.contains('modal-backdrop')) {
+    if (isOverlayClick) {
         e.preventDefault();
-        e.stopPropagation();
+        
+        // Закриваємо тільки активну модалку
+        const activeModal = e.target;
+        activeModal.classList.remove('active');
 
-        topModal.classList.remove('active');
+        // Зберігаємо зміни при закритті
+        saveDataToLocalStorage();
 
-        // Якщо залишилися ще відкриті вікна — нічого більше не робимо (зробили крок назад)
-        // Якщо закрили останнє вікно — повертаємося на головний екран
-        const remaining = document.querySelectorAll('.modal-overlay.active, .modal.active, .modal-backdrop.active');
-        if (remaining.length === 0 && typeof goToScreen === 'function') {
+        const remainingModals = document.querySelectorAll('.modal-overlay.active, .modal.active, .modal-backdrop.active');
+        if (remainingModals.length === 0 && typeof goToScreen === 'function') {
             goToScreen('screen-main');
         }
     }
-}, true);
+});
+
+
+/* ==========================================
+   ФУНКЦІЯ ПРИМУСОВОГО ЗБЕРЕЖЕННЯ В ЛОКАЛЬНУ БАЗУ
+   ========================================== */
+function saveDataToLocalStorage() {
+    if (typeof productsDatabase !== 'undefined') {
+        localStorage.setItem('productsDatabase', JSON.stringify(productsDatabase));
+        localStorage.setItem('products', JSON.stringify(productsDatabase));
+    }
+}
 
 
 /* ==========================================
@@ -57,6 +66,7 @@ window.duplicateProduct = function(index, event) {
     };
 
     productsDatabase.push(newProduct);
+    saveDataToLocalStorage();
 
     try {
         if (typeof renderProductsList === 'function') renderProductsList();
@@ -71,7 +81,6 @@ window.duplicateProduct = function(index, event) {
 /* ==========================================
    3. АВТОПІДСТАНОВКА ТА ЗБЕРЕЖЕННЯ ОДИНИЦІ І ЦІНИ
    ========================================== */
-// АВТОЗЧИТУВАННЯ при виборі матеріалу
 document.addEventListener('change', function(e) {
     if (e.target && e.target.id === 'calcItemName') {
         const selectedMaterial = e.target.value;
@@ -80,11 +89,9 @@ document.addEventListener('change', function(e) {
         const unitSelect = document.getElementById('calcItemUnit');
         const priceInput = document.getElementById('calcItemPrice');
 
-        // Перевіряємо пам'ять (localStorage)
         const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
         
         if (savedParams[selectedMaterial]) {
-            // Якщо для цього матеріалу раніше зберігали ціну/одиницю
             if (unitSelect && savedParams[selectedMaterial].unit) {
                 unitSelect.value = savedParams[selectedMaterial].unit;
             }
@@ -92,7 +99,6 @@ document.addEventListener('change', function(e) {
                 priceInput.value = savedParams[selectedMaterial].price;
             }
         } else {
-            // Стандартні правила за назвою матеріалу
             if (unitSelect) {
                 const lowerName = selectedMaterial.toLowerCase();
                 if (lowerName.includes('тканина') || lowerName.includes('нитки') || lowerName.includes('секонд') || lowerName.includes('наповнювач')) {
@@ -113,6 +119,7 @@ document.addEventListener('change', function(e) {
    ========================================== */
 let activeProductRef = null;
 
+const originalOpenProductProfile = window.openProductProfile;
 window.openProductProfile = function(productId) {
     if (typeof originalOpenProductProfile === 'function') {
         originalOpenProductProfile(productId);
@@ -132,8 +139,6 @@ window.openProductProfile = function(productId) {
         setupProductViewMode();
     }, 50);
 };
-
-const originalOpenProductProfile = window.openProductProfile;
 
 function setupProductViewMode() {
     const calcBox = document.querySelector('.cost-calculator-box');
@@ -214,9 +219,11 @@ function renderProductCalcRows(isEditMode = false) {
 
     const topCost = document.querySelector('.product-cost, [data-cost]');
     if (topCost) topCost.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
+
+    saveDataToLocalStorage();
 }
 
-// ДОДАВАННЯ ПОЗИЦІЇ + ЗБЕРЕЖЕННЯ ОДИНИЦІ Й ЦІНИ В ПАМ'ЯТЬ
+// ДОДАВАННЯ СКЛАДОВОЇ
 document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'calcRowForm') {
         e.preventDefault();
@@ -237,21 +244,11 @@ document.addEventListener('submit', function(e) {
         const matQty = parseFloat(qtyInput ? qtyInput.value : 1) || 1;
         const matPrice = parseFloat(priceInput ? priceInput.value : 0) || 0;
 
-        // 1. Запам'ятовуємо вибір у localStorage для цього матеріалу
         const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
-        savedParams[matName] = {
-            unit: matUnit,
-            price: matPrice
-        };
+        savedParams[matName] = { unit: matUnit, price: matPrice };
         localStorage.setItem('material_defaults', JSON.stringify(savedParams));
 
-        // 2. Створюємо новий елемент
-        const newItem = {
-            name: matName,
-            unit: matUnit,
-            qty: matQty,
-            price: matPrice
-        };
+        const newItem = { name: matName, unit: matUnit, qty: matQty, price: matPrice };
 
         if (!activeProductRef.composition) activeProductRef.composition = [];
         
@@ -302,6 +299,7 @@ window.handleCreateProduct = function(event) {
 
     if (typeof productsDatabase !== 'undefined') {
         productsDatabase.push(newProd);
+        saveDataToLocalStorage(); // Обов'язкове збереження
     }
 
     nameInput.value = '';

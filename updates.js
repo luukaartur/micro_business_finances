@@ -283,29 +283,28 @@ document.addEventListener('click', function(e) {
 
             if (selectMat && selectMat.value) {
                 const matName = selectMat.value;
-                const qty = parseFloat(qtyInput ? qtyInput.value : 1) || 1;
+            const qty = parseFloat(qtyInput ? qtyInput.value : 1) || 1;
 
-                // Дістаємо ціну матеріалу з бази матеріалів/defaults
-                const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
-                const matData = savedParams[matName] || {};
-                const price = parseFloat(matData.price) || 0;
-                const unit = matData.unit || 'шт';
+            // Дістаємо ціну матеріалу з бази матеріалів/defaults
+            const savedParams = JSON.parse(localStorage.getItem('material_defaults') || '{}');
+            const matData = savedParams[matName] || {};
+            const price = parseFloat(matData.price) || 0;
+            const unit = matData.unit || 'шт';
 
-                if (!activeProductRef.composition) activeProductRef.composition = [];
-                
-                activeProductRef.composition.push({
-                    name: matName,
-                    qty: qty,
-                    price: price,
-                    unit: unit
-                });
+            if (!activeProductRef.composition) activeProductRef.composition = [];
+            
+            activeProductRef.composition.push({
+                name: matName,
+                qty: qty,
+                price: price,
+                unit: unit
+            });
 
-                // Синхронізуємо ключі
-                activeProductRef.calcRows = activeProductRef.composition;
-                activeProductRef.calc = activeProductRef.composition;
+            // Синхронізуємо ключі
+            activeProductRef.calcRows = activeProductRef.composition;
+            activeProductRef.calc = activeProductRef.composition;
 
-                renderNativeCostComposition();
-            }
+            renderNativeCostComposition();
         }, 100);
     }
 });

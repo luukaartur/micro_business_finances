@@ -204,10 +204,13 @@ function renderProductCalcRows(isEditMode = false) {
     if (topCost) topCost.innerText = `${totalSum.toLocaleString('uk-UA')} ₴`;
 }
 
-// 4.4. Додавання нового елемента з форми
+// 4.4. Додавання нового елемента з форми (З ЗАХИСТОМ ВІД ПОДВІЙНОГО ДОДАВАННЯ)
 document.addEventListener('submit', function(e) {
     if (e.target && e.target.id === 'calcRowForm') {
+        // Зупиняємо стандартну відправку ТА всі інші рідні скрипти сторінки
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         
         if (!activeProductRef) return;
 
@@ -227,16 +230,19 @@ document.addEventListener('submit', function(e) {
 
         if (!activeProductRef.composition) activeProductRef.composition = [];
         
+        // Додаємо ТІЛЬКИ ОДИН РАЗ
         activeProductRef.composition.push(newItem);
         activeProductRef.calcRows = activeProductRef.composition;
         activeProductRef.calc = activeProductRef.composition;
 
+        // Очищаємо ціну, але залишаємо базову одиницю
         if (priceInput) priceInput.value = '';
         if (qtyInput) qtyInput.value = '1';
 
+        // Перемальовуємо список
         renderProductCalcRows(true);
     }
-});
+}, true); // Флаг 'true' (capture phase) перехоплює подію раніше за інші скрипти!
 
 // 4.5. Видалення складової
 window.removeCalcItem = function(index) {

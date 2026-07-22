@@ -472,6 +472,7 @@
             </div>
         </div>
 
+        <!-- ЕКРАН: СПИСОК ТОВАРІВ -->
         <div id="screen-products" class="screen">
             <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
             <h2 class="screen-title">Товари</h2>
@@ -479,6 +480,7 @@
             <button class="btn-main btn-dark" onclick="openAddProductScreen()">➕ Додати виріб</button>
         </div>
 
+        <!-- ЕКРАН: ДОСЬЄ ТА РЕДАГУВАННЯ ТОВАРУ -->
         <div id="screen-product-detail" class="screen">
             <span class="back-link" onclick="openProductsScreen()">← До товарів</span>
             <h2 class="screen-title" id="prodDetailTitle">Продукт</h2>
@@ -489,6 +491,16 @@
                     <div class="meta-label">Собівартість</div>
                     <div class="balance-amount" id="prodDetailCost">0 ₴</div>
                 </div>
+            </div>
+
+            <!-- Блок редагування основних даних товару (назва та фото) -->
+            <div class="form-group">
+                <label>Редагувати назву</label>
+                <input type="text" id="editProdName" class="standard-input" placeholder="Назва товару">
+            </div>
+            <div class="form-group">
+                <label>Редагувати URL фото</label>
+                <input type="text" id="editProdImg" class="standard-input" placeholder="https://site.com/photo.jpg">
             </div>
 
             <div class="cost-calculator-box">
@@ -528,8 +540,9 @@
                 <button type="submit" class="btn-main btn-outline">Додати в калькулятор</button>
             </form>
 
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button class="btn-main btn-dark" onclick="saveProductCostCalculation()">💾 Зберегти калькуляцію</button>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">
+                <button class="btn-main btn-dark" onclick="saveProductCostCalculation()">💾 Зберегти зміни товару</button>
+                <button class="btn-main btn-yellow" onclick="cloneCurrentProduct()">📋 Клонувати товар</button>
                 <button class="btn-main btn-outline" style="color: var(--priority-coral); border-color: var(--priority-coral);" onclick="deleteCurrentProduct()">Видалити товар</button>
             </div>
         </div>
@@ -1073,6 +1086,10 @@
         document.getElementById('prodDetailImg').src = prod.imgUrl || 'https://placehold.co/100?text=📦';
         document.getElementById('prodDetailCost').innerText = `${prod.cost.toLocaleString('uk-UA')} ₴`;
 
+        // Заповнюємо поля редагування основних даних
+        document.getElementById('editProdName').value = prod.name;
+        document.getElementById('editProdImg').value = prod.imgUrl || '';
+
         currentCalculatorRows = prod.composition || [];
         renderCalculatorRows();
         document.getElementById('calcRowForm').reset();
@@ -1128,11 +1145,14 @@
     }
 
     async function saveProductCostCalculation() {
-        showToast("Збереження собівартості...");
+        showToast("Збереження товару...");
         await ensureValidToken();
 
         let total = 0;
         currentCalculatorRows.forEach(r => total += (r.qty * r.price));
+
+        const newName = document.getElementById('editProdName').value.trim();
+        const newImg = document.getElementById('editProdImg').value.trim();
 
         try {
             let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!A2:G10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
@@ -1145,9 +1165,9 @@
 
             if(rowIndex !== -1) {
                 const updatedFields = [
-                    [total, JSON.stringify(currentCalculatorRows)]
+                    [newName, total, newImg, JSON.stringify(currentCalculatorRows)]
                 ];
-                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!E${rowIndex}:F${rowIndex}?valueInputOption=USER_ENTERED`, {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Products_Database!D${rowIndex}:G${rowIndex}?valueInputOption=USER_ENTERED`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ values: updatedFields })
@@ -1156,6 +1176,28 @@
                 openProductProfile(selectedProductId);
             }
         } catch(e) { showToast("Не вдалося зберегти."); }
+    }
+
+    async function cloneCurrentProduct() {
+        const prod = productsDatabase.find(p => p.id === selectedProductId);
+        if (!prod) return;
+
+        showToast("Клонування товару...");
+        const newName = prod.name + " (Клонований)";
+        const dateStr = new Date().toISOString().split('T')[0];
+        const newId = Date.now().toString();
+        const compositionJson = JSON.stringify(prod.composition || []);
+
+        const row = [newId, dateStr, state.currentBusiness, newName, prod.cost, prod.imgUrl || '', compositionJson];
+
+        try {
+            await appendRowToSheet("Products_Database", row);
+            await syncWithGoogleSheets();
+            openProductProfile(newId);
+            showToast("Товар успішно клоновано!");
+        } catch(e) {
+            showToast("Помилка клонування.");
+        }
     }
 
     async function deleteCurrentProduct() {

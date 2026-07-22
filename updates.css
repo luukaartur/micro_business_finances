@@ -98,3 +98,41 @@
     align-items: center !important;
     gap: 10px !important;
 }
+
+/* Досьє та складові */
+.ingredients-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+}
+
+.ingredients-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dashed #eee;
+    font-size: 14px;
+}
+
+.ingredient-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.ingredient-row input {
+    margin-bottom: 0 !important;
+}
+
+.ingredient-row .ing-name { flex: 2; }
+.ingredient-row .ing-qty { flex: 1; }
+.ingredient-row .ing-price { flex: 1; }
+.ingredient-row .btn-remove { 
+    background: #ff4d4d; 
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    padding: 6px 10px; 
+    cursor: pointer; 
+}

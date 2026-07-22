@@ -1126,17 +1126,22 @@
     }
 
     function handleAddCalcRow(e) {
-        e.preventDefault();
-        const name = document.getElementById('calcItemName').value;
-        const unit = document.getElementById('calcItemUnit').value;
-        const qty = parseFloat(document.getElementById('calcItemQty').value);
-        const price = parseFloat(document.getElementById('calcItemPrice').value);
+    e.preventDefault();
+    const name = document.getElementById('calcItemName').value;
+    const unit = document.getElementById('calcItemUnit').value;
+    const qty = parseFloat(document.getElementById('calcItemQty').value);
+    const price = parseFloat(document.getElementById('calcItemPrice').value);
 
-        currentCalculatorRows.push({ name, unit, qty, price });
-        renderCalculatorRows();
-        
-        document.getElementById('calcItemQty').value = "1";
-        document.getElementById('calcItemPrice').value = "";
+    // Зберігаємо за замовчуванням одиницю для цієї назви матеріалу
+    if (!state.materialUnits) state.materialUnits = {};
+    state.materialUnits[name] = unit;
+    saveConfig();
+
+    currentCalculatorRows.push({ name, unit, qty, price });
+    renderCalculatorRows();
+    
+    document.getElementById('calcItemQty').value = "1";
+    document.getElementById('calcItemPrice').value = "";
     }
 
     function deleteCalcRow(idx) {

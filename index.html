@@ -651,7 +651,8 @@
         clients: ["Роздріб", "Instagram", "Власний сайт"],
         jobTypes: ["Пошиття", "Збірка", "Крій", "Дизайн"],
         materials: ["Шкіра Crazy Horse", "Нитки вощені", "Замок 5мм", "Коробка крафтова"],
-        units: ["шт", "кг", "м", "см", "г", "мл", "л"]
+        units: ["шт", "кг", "м", "см", "г", "мл", "л"],
+        materialUnits: {}
     };
 
     let transactionsDatabase = [];
@@ -932,84 +933,35 @@
         });
     }
 
-    // Редагування тексту завдання
-async function editTask(id) {
-    const task = tasksDatabase.find(t => t.id === id);
-    if (!task) return;
+    function renderTasksList() {
+        const container = document.getElementById('tasksListContainer');
+        const archContainer = document.getElementById('archivedTasksListContainer');
+        container.innerHTML = '';
+        archContainer.innerHTML = '';
 
-    const newText = prompt("Редагувати текст завдання:", task.text);
-    if (!newText || newText.trim() === "" || newText === task.text) return;
+        const active = tasksDatabase.filter(t => t.business === state.currentBusiness && t.status === 'active');
+        const archived = tasksDatabase.filter(t => t.business === state.currentBusiness && t.status === 'archived');
 
-    showToast("Оновлення...");
-    await ensureValidToken();
-
-    try {
-        let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
-        let getRows = await getResp.json();
-        let rowIndex = -1;
-        
-        if(getRows.values) {
-            rowIndex = getRows.values.findIndex(r => r[0] === id) + 2; 
-        }
-
-        if(rowIndex !== -1) {
-            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!D${rowIndex}?valueInputOption=USER_ENTERED`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ values: [[newText.trim()]] })
+        if(active.length === 0) {
+            container.innerHTML = '<p style="color: var(--gray-text); text-align:center; padding: 20px 0;">Немає активних завдань</p>';
+        } else {
+            active.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'widget-task-item';
+                item.innerHTML = `
+                    <div class="task-left" style="flex-grow: 1;">
+                        <div class="task-badge" style="background-color: var(--priority-${t.priority});"></div>
+                        <span class="task-text">${t.text}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" style="border:none; background:none; cursor:pointer; font-size:14px;" onclick="editTask('${t.id}')">✏️</button>
+                        <button type="button" style="border:none; background:none; cursor:pointer; font-size:14px;" onclick="deleteTaskPermanently('${t.id}')">🗑️</button>
+                        <div class="task-checkbox" title="Завершити" onclick="archiveTask('${t.id}')"></div>
+                    </div>
+                `;
+                container.appendChild(item);
             });
-            await syncWithGoogleSheets();
         }
-    } catch(e) { showToast("Не вдалося редагувати."); }
-}
-
-// Повне видалення завдання з Google Таблиць
-async function deleteTaskPermanently(id) {
-    if (!confirm("Видалити це завдання назавжди?")) return;
-
-    showToast("Видалення...");
-    await ensureValidToken();
-
-    try {
-        let metadataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`, {
-            headers: { 'Authorization': `Bearer ${googleToken}` }
-        });
-        let metadata = await metadataResp.json();
-        let targetSheet = metadata.sheets.find(s => s.properties.title === "Tasks_Database");
-        let sheetId = targetSheet ? targetSheet.properties.sheetId : 0;
-
-        let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
-        let getRows = await getResp.json();
-        let rowIndex = -1;
-        
-        if(getRows.values) {
-            rowIndex = getRows.values.findIndex(r => r[0] === id) + 2; 
-        }
-
-        if(rowIndex !== -1) {
-            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requests: [{
-                        deleteDimension: {
-                            range: {
-                                sheetId: sheetId,
-                                dimension: "ROWS",
-                                startIndex: rowIndex - 1,
-                                endIndex: rowIndex
-                            }
-                        }
-                    }]
-                })
-            });
-            await syncWithGoogleSheets();
-            showToast("Завдання видалено!");
-        }
-    } catch(e) { 
-        showToast("Помилка видалення.");
-    }
-}
 
         if(archived.length === 0) {
             archContainer.innerHTML = '<p style="color: var(--gray-text); text-align:center; padding: 20px 0;">Архів порожній</p>';
@@ -1019,13 +971,90 @@ async function deleteTaskPermanently(id) {
                 item.className = 'widget-task-item';
                 item.style.opacity = '0.6';
                 item.innerHTML = `
-                    <div class="task-left">
+                    <div class="task-left" style="flex-grow: 1;">
                         <span class="task-text" style="text-decoration: line-through;">${t.text}</span>
                     </div>
-                    <span style="font-size: 11px; color: var(--gray-text);">Виконано</span>
+                    <button type="button" style="border:none; background:none; cursor:pointer; font-size:14px;" onclick="deleteTaskPermanently('${t.id}')">🗑️</button>
                 `;
                 archContainer.appendChild(item);
             });
+        }
+    }
+
+    async function editTask(id) {
+        const task = tasksDatabase.find(t => t.id === id);
+        if (!task) return;
+
+        const newText = prompt("Редагувати текст завдання:", task.text);
+        if (!newText || newText.trim() === "" || newText === task.text) return;
+
+        showToast("Оновлення...");
+        await ensureValidToken();
+
+        try {
+            let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let getRows = await getResp.json();
+            let rowIndex = -1;
+            
+            if(getRows.values) {
+                rowIndex = getRows.values.findIndex(r => r[0] === id) + 2; 
+            }
+
+            if(rowIndex !== -1) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!D${rowIndex}?valueInputOption=USER_ENTERED`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ values: [[newText.trim()]] })
+                });
+                await syncWithGoogleSheets();
+            }
+        } catch(e) { showToast("Не вдалося редагувати."); }
+    }
+
+    async function deleteTaskPermanently(id) {
+        if (!confirm("Видалити це завдання назавжди?")) return;
+
+        showToast("Видалення...");
+        await ensureValidToken();
+
+        try {
+            let metadataResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`, {
+                headers: { 'Authorization': `Bearer ${googleToken}` }
+            });
+            let metadata = await metadataResp.json();
+            let targetSheet = metadata.sheets.find(s => s.properties.title === "Tasks_Database");
+            let sheetId = targetSheet ? targetSheet.properties.sheetId : 0;
+
+            let getResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Tasks_Database!A2:F10000`, { headers: { 'Authorization': `Bearer ${googleToken}` } });
+            let getRows = await getResp.json();
+            let rowIndex = -1;
+            
+            if(getRows.values) {
+                rowIndex = getRows.values.findIndex(r => r[0] === id) + 2; 
+            }
+
+            if(rowIndex !== -1) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${googleToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        requests: [{
+                            deleteDimension: {
+                                range: {
+                                    sheetId: sheetId,
+                                    dimension: "ROWS",
+                                    startIndex: rowIndex - 1,
+                                    endIndex: rowIndex
+                                }
+                            }
+                        }]
+                    })
+                });
+                await syncWithGoogleSheets();
+                showToast("Завдання видалено!");
+            }
+        } catch(e) { 
+            showToast("Помилка видалення.");
         }
     }
 
@@ -1179,22 +1208,21 @@ async function deleteTaskPermanently(id) {
     }
 
     function handleAddCalcRow(e) {
-    e.preventDefault();
-    const name = document.getElementById('calcItemName').value;
-    const unit = document.getElementById('calcItemUnit').value;
-    const qty = parseFloat(document.getElementById('calcItemQty').value);
-    const price = parseFloat(document.getElementById('calcItemPrice').value);
+        e.preventDefault();
+        const name = document.getElementById('calcItemName').value;
+        const unit = document.getElementById('calcItemUnit').value;
+        const qty = parseFloat(document.getElementById('calcItemQty').value);
+        const price = parseFloat(document.getElementById('calcItemPrice').value);
 
-    // Зберігаємо за замовчуванням одиницю для цієї назви матеріалу
-    if (!state.materialUnits) state.materialUnits = {};
-    state.materialUnits[name] = unit;
-    saveConfig();
+        if (!state.materialUnits) state.materialUnits = {};
+        state.materialUnits[name] = unit;
+        saveConfig();
 
-    currentCalculatorRows.push({ name, unit, qty, price });
-    renderCalculatorRows();
-    
-    document.getElementById('calcItemQty').value = "1";
-    document.getElementById('calcItemPrice').value = "";
+        currentCalculatorRows.push({ name, unit, qty, price });
+        renderCalculatorRows();
+        
+        document.getElementById('calcItemQty').value = "1";
+        document.getElementById('calcItemPrice').value = "";
     }
 
     function deleteCalcRow(idx) {
@@ -1554,28 +1582,27 @@ async function deleteTaskPermanently(id) {
     }
 
     function populateDropdowns() {
-    const expCat = document.getElementById('expCategory'); expCat.innerHTML = '';
-    state.categories.forEach(c => expCat.innerHTML += `<option value="${c}">${c}</option>`);
-    
-    const incCli = document.getElementById('incClient'); incCli.innerHTML = '';
-    state.clients.forEach(c => incCli.innerHTML += `<option value="${c}">${c}</option>`);
+        const expCat = document.getElementById('expCategory'); expCat.innerHTML = '';
+        state.categories.forEach(c => expCat.innerHTML += `<option value="${c}">${c}</option>`);
+        
+        const incCli = document.getElementById('incClient'); incCli.innerHTML = '';
+        state.clients.forEach(c => incCli.innerHTML += `<option value="${c}">${c}</option>`);
 
-    const jobDrop = document.getElementById('jobType'); jobDrop.innerHTML = '';
-    state.jobTypes.forEach(j => jobDrop.innerHTML += `<option value="${j}">${j}</option>`);
+        const jobDrop = document.getElementById('jobType'); jobDrop.innerHTML = '';
+        state.jobTypes.forEach(j => jobDrop.innerHTML += `<option value="${j}">${j}</option>`);
 
-    const calcMat = document.getElementById('calcItemName'); calcMat.innerHTML = '';
-    state.materials.forEach(m => calcMat.innerHTML += `<option value="${m}">${m}</option>`);
+        const calcMat = document.getElementById('calcItemName'); calcMat.innerHTML = '';
+        state.materials.forEach(m => calcMat.innerHTML += `<option value="${m}">${m}</option>`);
 
-    const calcUnit = document.getElementById('calcItemUnit'); calcUnit.innerHTML = '';
-    state.units.forEach(u => calcUnit.innerHTML += `<option value="${u}">${u}</option>`);
+        const calcUnit = document.getElementById('calcItemUnit'); calcUnit.innerHTML = '';
+        state.units.forEach(u => calcUnit.innerHTML += `<option value="${u}">${u}</option>`);
 
-    // Автоматична підстановка збереженої одиниці при виборі матеріалу
-    calcMat.onchange = function() {
-        const matName = this.value;
-        if (state.materialUnits && state.materialUnits[matName]) {
-            calcUnit.value = state.materialUnits[matName];
-        }
-    };
+        calcMat.onchange = function() {
+            const matName = this.value;
+            if (state.materialUnits && state.materialUnits[matName]) {
+                calcUnit.value = state.materialUnits[matName];
+            }
+        };
     }
 
     function changeBusiness() {
@@ -1725,6 +1752,6 @@ async function deleteTaskPermanently(id) {
         }
     }
 </script>
-    <script src="updates.js"></script>
+<script src="updates.js"></script>
 </body>
 </html>

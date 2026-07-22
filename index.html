@@ -1501,20 +1501,28 @@
     }
 
     function populateDropdowns() {
-        const expCat = document.getElementById('expCategory'); expCat.innerHTML = '';
-        state.categories.forEach(c => expCat.innerHTML += `<option value="${c}">${c}</option>`);
-        
-        const incCli = document.getElementById('incClient'); incCli.innerHTML = '';
-        state.clients.forEach(c => incCli.innerHTML += `<option value="${c}">${c}</option>`);
+    const expCat = document.getElementById('expCategory'); expCat.innerHTML = '';
+    state.categories.forEach(c => expCat.innerHTML += `<option value="${c}">${c}</option>`);
+    
+    const incCli = document.getElementById('incClient'); incCli.innerHTML = '';
+    state.clients.forEach(c => incCli.innerHTML += `<option value="${c}">${c}</option>`);
 
-        const jobDrop = document.getElementById('jobType'); jobDrop.innerHTML = '';
-        state.jobTypes.forEach(j => jobDrop.innerHTML += `<option value="${j}">${j}</option>`);
+    const jobDrop = document.getElementById('jobType'); jobDrop.innerHTML = '';
+    state.jobTypes.forEach(j => jobDrop.innerHTML += `<option value="${j}">${j}</option>`);
 
-        const calcMat = document.getElementById('calcItemName'); calcMat.innerHTML = '';
-        state.materials.forEach(m => calcMat.innerHTML += `<option value="${m}">${m}</option>`);
+    const calcMat = document.getElementById('calcItemName'); calcMat.innerHTML = '';
+    state.materials.forEach(m => calcMat.innerHTML += `<option value="${m}">${m}</option>`);
 
-        const calcUnit = document.getElementById('calcItemUnit'); calcUnit.innerHTML = '';
-        state.units.forEach(u => calcUnit.innerHTML += `<option value="${u}">${u}</option>`);
+    const calcUnit = document.getElementById('calcItemUnit'); calcUnit.innerHTML = '';
+    state.units.forEach(u => calcUnit.innerHTML += `<option value="${u}">${u}</option>`);
+
+    // Автоматична підстановка збереженої одиниці при виборі матеріалу
+    calcMat.onchange = function() {
+        const matName = this.value;
+        if (state.materialUnits && state.materialUnits[matName]) {
+            calcUnit.value = state.materialUnits[matName];
+        }
+    };
     }
 
     function changeBusiness() {

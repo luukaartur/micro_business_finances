@@ -78,9 +78,9 @@ function closeModal(id) {
     if(m) m.classList.remove('active');
 }
 
-// 1. ВІДОБРАЖЕННЯ СПИСКУ ТОВАРІВ
+// 1. ВІДОБРАЖЕННЯ СПИСКУ ТОВАРІВ (ПІДТРИМУЄ ОБА ID)
 function renderProductsList() {
-    const container = document.getElementById('products-container');
+    const container = document.getElementById('productsListContainer') || document.getElementById('products-container');
     if (!container) return;
 
     container.innerHTML = '';

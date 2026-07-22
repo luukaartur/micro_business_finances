@@ -477,7 +477,7 @@
             <span class="back-link" onclick="goToScreen('screen-main')">← Назад</span>
             <h2 class="screen-title">Товари</h2>
             <div class="products-list" id="productsListContainer"></div>
-            <button class="btn-main btn-dark" onclick="openAddProductScreen()">➕ Додати виріб</button>
+            <button type="button" class="btn-main btn-dark" onclick="openAddProductScreen()">➕ Додати виріб</button>
         </div>
 
         <!-- ЕКРАН: ДОСЬЄ ТА РЕДАГУВАННЯ ТОВАРУ -->
@@ -541,9 +541,9 @@
             </form>
 
             <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px;">
-                <button class="btn-main btn-dark" onclick="saveProductCostCalculation()">💾 Зберегти зміни товару</button>
-                <button class="btn-main btn-yellow" onclick="cloneCurrentProduct()">📋 Клонувати товар</button>
-                <button class="btn-main btn-outline" style="color: var(--priority-coral); border-color: var(--priority-coral);" onclick="deleteCurrentProduct()">Видалити товар</button>
+                <button type="button" class="btn-main btn-dark" onclick="saveProductCostCalculation()">💾 Зберегти зміни товару</button>
+                <button type="button" class="btn-main btn-yellow" onclick="cloneCurrentProduct()">📋 Клонувати товар</button>
+                <button type="button" class="btn-main btn-outline" style="color: var(--priority-coral); border-color: var(--priority-coral);" onclick="deleteCurrentProduct()">Видалити товар</button>
             </div>
         </div>
 
@@ -577,7 +577,7 @@
                 <button type="submit" class="btn-main btn-dark" style="margin-top: 10px;">Додати завдання</button>
             </form>
 
-            <button class="btn-main btn-outline" style="margin-top: 20px;" onclick="toggleTaskArchiveView()" id="btnToggleArchive">Переглянути архів</button>
+            <button type="button" class="btn-main btn-outline" style="margin-top: 20px;" onclick="toggleTaskArchiveView()" id="btnToggleArchive">Переглянути архів</button>
             <div class="tasks-full-list" id="archivedTasksListContainer" style="display: none; margin-top: 15px;"></div>
         </div>
 
@@ -884,7 +884,8 @@
             if(target) target.classList.add('active');
         } else {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+            const target = document.getElementById(screenId);
+            if(target) target.classList.add('active');
         }
 
         if(screenId === 'screen-main') {
@@ -1086,7 +1087,6 @@
         document.getElementById('prodDetailImg').src = prod.imgUrl || 'https://placehold.co/100?text=📦';
         document.getElementById('prodDetailCost').innerText = `${prod.cost.toLocaleString('uk-UA')} ₴`;
 
-        // Заповнюємо поля редагування основних даних
         document.getElementById('editProdName').value = prod.name;
         document.getElementById('editProdImg').value = prod.imgUrl || '';
 
@@ -1117,7 +1117,7 @@
                 <span style="font-weight: 700;">${row.name}</span>
                 <span style="color: var(--gray-text); text-align: right;">${row.qty} ${row.unit || 'шт'}</span>
                 <span style="text-align: right; font-weight: 700;">${(row.price * row.qty).toLocaleString('uk-UA')} ₴</span>
-                <button class="btn-delete-row" onclick="deleteCalcRow(${idx})">×</button>
+                <button type="button" class="btn-delete-row" onclick="deleteCalcRow(${idx})">×</button>
             `;
             container.appendChild(item);
         });
@@ -1580,7 +1580,7 @@
                 div.className = 'deletion-item';
                 div.innerHTML = `
                     <span>${item}</span>
-                    <button class="btn-delete-item" onclick="handleDeleteItem('${item}')">Видалити</button>
+                    <button type="button" class="btn-delete-item" onclick="handleDeleteItem('${item}')">Видалити</button>
                 `;
                 container.appendChild(div);
             });
